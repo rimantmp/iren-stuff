@@ -7,6 +7,7 @@ use App\Models\Kelurahan;
 use App\Models\Kota;
 use App\Models\PenyaluranBantuan;
 use App\Models\Provinsi;
+use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -76,6 +77,13 @@ class BantuanAirController extends Controller
     {
         $air = JenisBantuan::where('slug', 'air')->firstOrFail();
 
+        if ($request->filled('tanggal_rencana')) {
+            $request->merge(['tanggal_rencana' => $this->normalizeDate($request->input('tanggal_rencana'))]);
+        }
+        if ($request->filled('tanggal_penyaluran')) {
+            $request->merge(['tanggal_penyaluran' => $this->normalizeDate($request->input('tanggal_penyaluran'))]);
+        }
+
         $validated = $request->validate([
             'nama_penerima' => ['required', 'string', 'max:255'],
             'kontak_penerima' => ['nullable', 'string', 'max:50'],
@@ -136,24 +144,24 @@ class BantuanAirController extends Controller
             'kota_id' => $validated['kota_id'],
             'kecamatan_id' => $validated['kecamatan_id'],
             'kelurahan_id' => $validated['kelurahan_id'],
-            'alamat_detail' => $validated['alamat_detail'],
+            'alamat_detail' => $validated['alamat_detail'] ?? null,
             'latitude' => $latitude,
             'longitude' => $longitude,
             'nama_penerima' => $validated['nama_penerima'],
-            'kontak_penerima' => $validated['kontak_penerima'],
+            'kontak_penerima' => $validated['kontak_penerima'] ?? null,
             'jumlah_kk' => $validated['jumlah_kk'],
             'jumlah_jiwa' => $validated['jumlah_jiwa'],
             'jumlah_bantuan' => $validated['jumlah_bantuan'],
             'satuan' => $validated['satuan'],
             'tanggal_rencana' => $validated['tanggal_rencana'],
-            'tanggal_penyaluran' => $validated['tanggal_penyaluran'],
+            'tanggal_penyaluran' => $validated['tanggal_penyaluran'] ?? null,
             'status' => $validated['status'],
-            'metode_distribusi' => $validated['metode_distribusi'],
-            'nomor_armada' => $validated['nomor_armada'],
-            'nama_petugas' => $validated['nama_petugas'],
-            'sumber_air' => $validated['sumber_air'],
+            'metode_distribusi' => $validated['metode_distribusi'] ?? null,
+            'nomor_armada' => $validated['nomor_armada'] ?? null,
+            'nama_petugas' => $validated['nama_petugas'] ?? null,
+            'sumber_air' => $validated['sumber_air'] ?? null,
             'foto_dokumentasi' => $fotoPath,
-            'catatan' => $validated['catatan'],
+            'catatan' => $validated['catatan'] ?? null,
         ]);
 
         return redirect()->route('bantuan.air.index')->with('success', "Data penyaluran air dengan kode {$kodeTransaksi} berhasil ditambahkan!");
@@ -198,6 +206,13 @@ class BantuanAirController extends Controller
     public function update(Request $request, int $id): RedirectResponse
     {
         $penyaluran = PenyaluranBantuan::findOrFail($id);
+
+        if ($request->filled('tanggal_rencana')) {
+            $request->merge(['tanggal_rencana' => $this->normalizeDate($request->input('tanggal_rencana'))]);
+        }
+        if ($request->filled('tanggal_penyaluran')) {
+            $request->merge(['tanggal_penyaluran' => $this->normalizeDate($request->input('tanggal_penyaluran'))]);
+        }
 
         $validated = $request->validate([
             'nama_penerima' => ['required', 'string', 'max:255'],
@@ -265,5 +280,31 @@ class BantuanAirController extends Controller
         $penyaluran->update($updates);
 
         return back()->with('success', "Status penyaluran {$penyaluran->kode_transaksi} berhasil diperbarui menjadi {$validated['status']}.");
+    }
+
+    /**
+     * Konversi input tanggal dd/mm/yyyy atau yyyy-mm-dd menjadi format standar yyyy-mm-dd.
+     */
+    protected function normalizeDate(?string $date): ?string
+    {
+        if (empty($date)) {
+            return null;
+        }
+
+        $date = trim($date);
+
+        if (preg_match('/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/', $date, $matches)) {
+            return sprintf('%04d-%02d-%02d', (int) $matches[3], (int) $matches[2], (int) $matches[1]);
+        }
+
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+            return $date;
+        }
+
+        try {
+            return Carbon::parse($date)->format('Y-m-d');
+        } catch (\Throwable) {
+            return $date;
+        }
     }
 }

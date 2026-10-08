@@ -151,4 +151,41 @@ class BantuanAirTest extends TestCase
         $response->assertSee('PIHAK PERTAMA');
         $response->assertSee('PIHAK KEDUA');
     }
+
+    public function test_can_store_bantuan_air_with_dd_mm_yyyy_date_format(): void
+    {
+        $user = User::factory()->create();
+
+        Kelurahan::firstOrCreate(
+            ['id' => '7326011002'],
+            ['nama' => 'Rantepao', 'latitude' => -2.97566, 'longitude' => 119.89841]
+        );
+
+        $response = $this->actingAs($user)->post(route('bantuan.air.store'), [
+            'nama_penerima' => 'Keluarga Somba',
+            'kontak_penerima' => '081234567890',
+            'jumlah_kk' => 5,
+            'jumlah_jiwa' => 20,
+            'provinsi_id' => '73',
+            'kota_id' => '7326',
+            'kecamatan_id' => '732601',
+            'kelurahan_id' => '7326011002',
+            'alamat_detail' => 'Jalan Pemuda',
+            'jumlah_bantuan' => 5000,
+            'satuan' => 'Liter',
+            'tanggal_rencana' => '25/10/2026',
+            'tanggal_penyaluran' => '26/10/2026',
+            'status' => 'TERSALURKAN',
+            'metode_distribusi' => 'Truk Tangki',
+            'nomor_armada' => 'DP 1234 AB',
+            'nama_petugas' => 'Budi',
+        ]);
+
+        $response->assertRedirect(route('bantuan.air.index'));
+        $this->assertDatabaseHas('penyaluran_bantuan', [
+            'nama_penerima' => 'Keluarga Somba',
+            'tanggal_rencana' => '2026-10-25 00:00:00',
+            'tanggal_penyaluran' => '2026-10-26 00:00:00',
+        ]);
+    }
 }

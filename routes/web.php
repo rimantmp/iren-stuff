@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\BackupController;
 use App\Http\Controllers\BantuanAirController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\JenisBantuanController;
@@ -86,6 +87,18 @@ Route::middleware('auth')->group(function (): void {
         Route::get('/{id}/edit', [AdminUserController::class, 'edit'])->name('edit');
         Route::put('/{id}', [AdminUserController::class, 'update'])->name('update');
         Route::delete('/{id}', [AdminUserController::class, 'destroy'])->name('destroy');
+    });
+
+    // Backup & Pemulihan Basis Data
+    Route::prefix('admin/backup')->name('admin.backup.')->group(function (): void {
+        Route::get('/', [BackupController::class, 'index'])->name('index');
+        Route::post('/generate', [BackupController::class, 'store'])->name('store');
+        Route::get('/download/{filename}', [BackupController::class, 'download'])
+            ->where('filename', '.*')
+            ->name('download');
+        Route::delete('/{filename}', [BackupController::class, 'destroy'])
+            ->where('filename', '.*')
+            ->name('destroy');
     });
 
     // AJAX Endpoint Select2 Wilayah

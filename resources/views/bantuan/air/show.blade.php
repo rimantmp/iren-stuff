@@ -37,7 +37,7 @@
                         {{ $penyaluran->kode_transaksi }}
                     </span>
                     <span class="text-xs text-slate-400">|</span>
-                    <span class="text-xs text-slate-500">Dibuat {{ $penyaluran->created_at->format('d M Y, H:i') }}</span>
+                    <span class="text-xs text-slate-500">Dibuat {{ $penyaluran->created_at->format('d/m/Y, H:i') }}</span>
                 </div>
             </div>
 

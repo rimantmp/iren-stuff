@@ -8,6 +8,7 @@ use App\Models\Kelurahan;
 use App\Models\Kota;
 use App\Models\PenyaluranBantuan;
 use App\Models\Provinsi;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Pagination\Paginator;
@@ -37,11 +38,17 @@ class RekapController extends Controller
         }
 
         if ($request->filled('tanggal_mulai')) {
-            $query->whereDate('tanggal_rencana', '>=', $request->query('tanggal_mulai'));
+            $tglMulai = $this->normalizeDate($request->query('tanggal_mulai'));
+            if ($tglMulai) {
+                $query->whereDate('tanggal_rencana', '>=', $tglMulai);
+            }
         }
 
         if ($request->filled('tanggal_akhir')) {
-            $query->whereDate('tanggal_rencana', '<=', $request->query('tanggal_akhir'));
+            $tglAkhir = $this->normalizeDate($request->query('tanggal_akhir'));
+            if ($tglAkhir) {
+                $query->whereDate('tanggal_rencana', '<=', $tglAkhir);
+            }
         }
 
         // Clone query for aggregation
@@ -88,19 +95,28 @@ class RekapController extends Controller
         }
 
         if ($request->filled('tanggal_mulai')) {
-            $query->whereDate('tanggal_rencana', '>=', $request->query('tanggal_mulai'));
+            $tglMulai = $this->normalizeDate($request->query('tanggal_mulai'));
+            if ($tglMulai) {
+                $query->whereDate('tanggal_rencana', '>=', $tglMulai);
+            }
         }
 
         if ($request->filled('tanggal_akhir')) {
-            $query->whereDate('tanggal_rencana', '<=', $request->query('tanggal_akhir'));
+            $tglAkhir = $this->normalizeDate($request->query('tanggal_akhir'));
+            if ($tglAkhir) {
+                $query->whereDate('tanggal_rencana', '<=', $tglAkhir);
+            }
         }
 
         $laporanList = $query->orderBy('tanggal_rencana', 'asc')->get();
 
+        $tglMulaiText = $request->query('tanggal_mulai') ? date('d/m/Y', strtotime($this->normalizeDate($request->query('tanggal_mulai')))) : 'Awal';
+        $tglAkhirText = $request->query('tanggal_akhir') ? date('d/m/Y', strtotime($this->normalizeDate($request->query('tanggal_akhir')))) : 'Sekarang';
+
         $filterInfo = [
             'jenis' => $request->filled('jenis_bantuan_id') ? JenisBantuan::find($request->query('jenis_bantuan_id'))?->nama : 'Semua Jenis Bantuan',
             'status' => $request->query('status', 'Semua Status'),
-            'periode' => ($request->query('tanggal_mulai') ? date('d/m/Y', strtotime($request->query('tanggal_mulai'))) : 'Awal').' s/d '.($request->query('tanggal_akhir') ? date('d/m/Y', strtotime($request->query('tanggal_akhir'))) : 'Sekarang'),
+            'periode' => "{$tglMulaiText} s/d {$tglAkhirText}",
         ];
 
         return view('rekap.cetak', compact('laporanList', 'filterInfo'));
@@ -179,12 +195,15 @@ class RekapController extends Controller
             default => 'Semua Wilayah (Sudah & Belum)',
         };
 
+        $tglMulaiText = $request->query('tanggal_mulai') ? date('d/m/Y', strtotime($this->normalizeDate($request->query('tanggal_mulai')))) : 'Awal';
+        $tglAkhirText = $request->query('tanggal_akhir') ? date('d/m/Y', strtotime($this->normalizeDate($request->query('tanggal_akhir')))) : 'Sekarang';
+
         $filterInfo = [
             'jenis' => $request->filled('jenis_bantuan_id') ? JenisBantuan::find($request->query('jenis_bantuan_id'))?->nama : 'Semua Program Bantuan',
             'kota' => $selectedKotaId !== 'SEMUA' ? Kota::find($selectedKotaId)?->nama : 'Semua Kabupaten/Kota',
             'kecamatan' => $request->filled('kecamatan_id') ? Kecamatan::find($request->query('kecamatan_id'))?->nama : 'Semua Kecamatan',
             'status' => $statusLabel,
-            'periode' => ($request->query('tanggal_mulai') ? date('d/m/Y', strtotime($request->query('tanggal_mulai'))) : 'Awal').' s/d '.($request->query('tanggal_akhir') ? date('d/m/Y', strtotime($request->query('tanggal_akhir'))) : 'Sekarang'),
+            'periode' => "{$tglMulaiText} s/d {$tglAkhirText}",
         ];
 
         return view('rekap.perbandingan-cetak', compact('items', 'summary', 'filterInfo'));
@@ -299,11 +318,17 @@ class RekapController extends Controller
         }
 
         if ($request->filled('tanggal_mulai')) {
-            $queryTx->whereDate('tanggal_rencana', '>=', $request->query('tanggal_mulai'));
+            $tglMulai = $this->normalizeDate($request->query('tanggal_mulai'));
+            if ($tglMulai) {
+                $queryTx->whereDate('tanggal_rencana', '>=', $tglMulai);
+            }
         }
 
         if ($request->filled('tanggal_akhir')) {
-            $queryTx->whereDate('tanggal_rencana', '<=', $request->query('tanggal_akhir'));
+            $tglAkhir = $this->normalizeDate($request->query('tanggal_akhir'));
+            if ($tglAkhir) {
+                $queryTx->whereDate('tanggal_rencana', '<=', $tglAkhir);
+            }
         }
 
         if ($kotaId !== 'SEMUA') {
@@ -481,5 +506,31 @@ class RekapController extends Controller
             ],
             'selected_kota_id' => $kotaId,
         ];
+    }
+
+    /**
+     * Konversi input tanggal dd/mm/yyyy atau yyyy-mm-dd menjadi format standar yyyy-mm-dd.
+     */
+    protected function normalizeDate(?string $date): ?string
+    {
+        if (empty($date)) {
+            return null;
+        }
+
+        $date = trim($date);
+
+        if (preg_match('/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/', $date, $matches)) {
+            return sprintf('%04d-%02d-%02d', (int) $matches[3], (int) $matches[2], (int) $matches[1]);
+        }
+
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+            return $date;
+        }
+
+        try {
+            return Carbon::parse($date)->format('Y-m-d');
+        } catch (\Throwable) {
+            return $date;
+        }
     }
 }

@@ -753,7 +753,13 @@
         const mm = String(date.getMonth() + 1).padStart(2, '0');
         const dd = String(date.getDate()).padStart(2, '0');
         const formatted = `${yyyy}-${mm}-${dd}`;
-        $('#tanggal_rencana').val(formatted).trigger('change');
+
+        const inputEl = document.getElementById('tanggal_rencana');
+        if (inputEl && inputEl._flatpickr) {
+            inputEl._flatpickr.setDate(formatted, true);
+        } else {
+            $('#tanggal_rencana').val(formatted).trigger('change');
+        }
     }
 
     function updateRatioCalculation() {
@@ -818,9 +824,13 @@
         $('#tanggal_rencana').on('change', function() {
             const val = $(this).val();
             if (val) {
-                const parts = val.split('-');
-                if (parts.length === 3) {
-                    $('#summaryTanggal').text(`${parts[2]}/${parts[1]}/${parts[0]}`);
+                if (val.includes('-')) {
+                    const parts = val.split('-');
+                    if (parts.length === 3) {
+                        $('#summaryTanggal').text(`${parts[2]}/${parts[1]}/${parts[0]}`);
+                    }
+                } else if (val.includes('/')) {
+                    $('#summaryTanggal').text(val);
                 }
             }
         });
