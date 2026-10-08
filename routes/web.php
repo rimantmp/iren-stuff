@@ -32,6 +32,7 @@ Route::middleware('auth')->group(function (): void {
         Route::get('/tambah', [BantuanAirController::class, 'create'])->name('create');
         Route::post('/', [BantuanAirController::class, 'store'])->name('store');
         Route::get('/{id}', [BantuanAirController::class, 'show'])->name('show');
+        Route::get('/{id}/cetak', [BantuanAirController::class, 'cetak'])->name('cetak');
         Route::get('/{id}/edit', [BantuanAirController::class, 'edit'])->name('edit');
         Route::put('/{id}', [BantuanAirController::class, 'update'])->name('update');
         Route::patch('/{id}/status', [BantuanAirController::class, 'updateStatus'])->name('status');
@@ -72,6 +73,9 @@ Route::middleware('auth')->group(function (): void {
     Route::prefix('rekap')->name('rekap.')->group(function (): void {
         Route::get('/', [RekapController::class, 'index'])->name('index');
         Route::get('/cetak', [RekapController::class, 'cetak'])->name('cetak');
+        Route::get('/perbandingan', [RekapController::class, 'perbandingan'])->name('perbandingan');
+        Route::get('/perbandingan/cetak', [RekapController::class, 'cetakPerbandingan'])->name('perbandingan.cetak');
+        Route::get('/perbandingan/excel', [RekapController::class, 'exportPerbandinganExcel'])->name('perbandingan.excel');
     });
 
     // Manajemen Administrator

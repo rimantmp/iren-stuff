@@ -11,11 +11,11 @@
         <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
         <span>Daftar Bantuan</span>
     </a>
-    <button onclick="window.print()"
-            class="inline-flex items-center px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded text-xs font-medium transition">
-        <svg class="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4H7v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+    <a href="{{ route('bantuan.air.cetak', $penyaluran->id) }}" target="_blank"
+       class="inline-flex items-center px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded text-xs font-medium transition shadow-sm">
+        <svg class="w-3.5 h-3.5 mr-1.5 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4H7v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
         <span>Cetak Lembar Serah Terima</span>
-    </button>
+    </a>
     <a href="{{ route('bantuan.air.edit', $penyaluran->id) }}"
        class="inline-flex items-center px-3 py-1.5 bg-blue-700 hover:bg-blue-800 text-white rounded text-xs font-medium transition focus:ring-2 focus:ring-offset-1 focus:ring-blue-600">
         <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
@@ -25,7 +25,7 @@
 @endsection
 
 @section('content')
-<div class="space-y-6">
+<div id="screenView" class="space-y-6 print:hidden">
 
     <!-- Top Card: Status Operational Stepper & Quick Action -->
     <div class="bg-white rounded-lg border border-slate-200 p-5 shadow-sm">
@@ -383,69 +383,160 @@
 
 </div>
 
-<!-- Printable Delivery Receipt (Hidden on screen, visible on print) -->
-<div id="printReceipt" class="hidden print:block p-8 text-black bg-white">
-    <div class="text-center border-b-2 border-black pb-4 mb-6">
-        <h1 class="text-lg font-bold uppercase tracking-wider">BERITA ACARA SERAH TERIMA BANTUAN AIR BERSIH</h1>
-        <p class="text-xs mt-1">Sistem Tanggap Darurat dan Distribusi Logistik Air Bersih</p>
-        <p class="text-xs font-mono font-bold mt-1">NO: {{ $penyaluran->kode_transaksi }}</p>
+<!-- Printable Delivery Receipt (Hidden on screen, formatted on print) -->
+<div id="printReceipt" class="hidden print:block text-slate-900 bg-white">
+    <div class="border-b-4 border-double border-slate-900 pb-3 mb-5">
+        <div class="flex items-center justify-between gap-4">
+            <div class="w-14 h-14 rounded-lg bg-blue-700 text-white flex flex-col items-center justify-center flex-shrink-0 border border-blue-800">
+                <span class="font-black text-lg tracking-tighter leading-none">SB</span>
+                <span class="text-[7px] font-bold tracking-widest uppercase mt-0.5">Aspirasi</span>
+            </div>
+            <div class="text-center flex-1 px-2">
+                <h2 class="text-[10px] font-bold text-slate-600 tracking-widest uppercase mb-0.5">PROGRAM ASPIRASI MASYARAKAT SULAWESI SELATAN III</h2>
+                <h1 class="text-base font-black text-slate-950 uppercase tracking-tight">TIM LOGISTIK & SATUAN TUGAS PENYALURAN AIR BERSIH</h1>
+                <p class="text-[10px] text-slate-600 font-medium">Sekretariat Penyaluran Lapangan: Wilayah Kabupaten Toraja Utara & Sekitarnya</p>
+            </div>
+            <div class="w-14 text-right flex-shrink-0">
+                <div class="border border-slate-300 p-1 rounded inline-block bg-slate-50 text-center">
+                    <span class="block text-[7px] font-bold text-slate-500 uppercase">Dokumen</span>
+                    <span class="block font-mono text-[8px] font-bold text-blue-700">RESMI</span>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <table class="w-full text-xs mb-6 border-collapse">
-        <tr>
-            <td class="py-1.5 font-bold w-48">Tanggal Rencana</td>
-            <td class="py-1.5">: {{ $penyaluran->tanggal_rencana->format('d F Y') }}</td>
-        </tr>
-        <tr>
-            <td class="py-1.5 font-bold">Tanggal Realisasi</td>
-            <td class="py-1.5">: {{ $penyaluran->tanggal_penyaluran ? $penyaluran->tanggal_penyaluran->format('d F Y') : '-' }}</td>
-        </tr>
-        <tr>
-            <td class="py-1.5 font-bold">Wilayah Distribusi</td>
-            <td class="py-1.5">: Kel. {{ $penyaluran->kelurahan?->nama }}, Kec. {{ $penyaluran->kecamatan?->nama }}, {{ $penyaluran->kota?->nama }}</td>
-        </tr>
-        <tr>
-            <td class="py-1.5 font-bold">Alamat / Titik Toren</td>
-            <td class="py-1.5">: {{ $penyaluran->alamat_detail ?: '-' }}</td>
-        </tr>
-        <tr>
-            <td class="py-1.5 font-bold">Penanggung Jawab / Penerima</td>
-            <td class="py-1.5">: {{ $penyaluran->nama_penerima }} ({{ $penyaluran->kontak_penerima ?: 'Tanpa kontak' }})</td>
-        </tr>
-        <tr>
-            <td class="py-1.5 font-bold">Estimasi Warga Terbantu</td>
-            <td class="py-1.5">: {{ $penyaluran->jumlah_kk }} KK / {{ $penyaluran->jumlah_jiwa }} Jiwa</td>
-        </tr>
-        <tr>
-            <td class="py-1.5 font-bold">Volume Air Bersih</td>
-            <td class="py-1.5 font-bold text-sm">: {{ number_format($penyaluran->jumlah_bantuan, 0, ',', '.') }} {{ $penyaluran->satuan }}</td>
-        </tr>
-        <tr>
-            <td class="py-1.5 font-bold">Nomor Truk Tangki</td>
-            <td class="py-1.5">: {{ $penyaluran->nomor_armada ?: '-' }}</td>
-        </tr>
-        <tr>
-            <td class="py-1.5 font-bold">Petugas / Pengemudi</td>
-            <td class="py-1.5">: {{ $penyaluran->nama_petugas ?: '-' }}</td>
-        </tr>
+    <div class="text-center mb-5">
+        <h2 class="text-base font-black uppercase tracking-wider text-slate-950 underline decoration-2 underline-offset-4">
+            BERITA ACARA SERAH TERIMA (BAST)
+        </h2>
+        <p class="text-[11px] font-semibold text-slate-700 mt-1 uppercase tracking-wide">
+            DISTRIBUSI BANTUAN LOGISTIK AIR BERSIH
+        </p>
+        <div class="inline-block mt-1 px-3 py-0.5 bg-slate-100 rounded border border-slate-300 font-mono text-[11px] font-bold text-slate-900">
+            NOMOR: BAST/AIR/{{ $penyaluran->kode_transaksi }}
+        </div>
+    </div>
+
+    <div class="text-[11px] leading-relaxed text-slate-800 mb-3 text-justify">
+        Pada hari ini, <b>{{ \Carbon\Carbon::parse($penyaluran->tanggal_penyaluran ?: $penyaluran->tanggal_rencana)->locale('id')->isoFormat('dddd') }}</b>, tanggal <b>{{ \Carbon\Carbon::parse($penyaluran->tanggal_penyaluran ?: $penyaluran->tanggal_rencana)->locale('id')->isoFormat('D MMMM Y') }}</b>, bertempat di titik lokasi penampungan/distribusi masyarakat, kami yang bertanda tangan di bawah ini telah melaksanakan serah terima bantuan pasokan air bersih:
+    </div>
+
+    <div class="grid grid-cols-2 gap-3 mb-4 text-[11px]">
+        <div class="border border-slate-300 rounded p-3 bg-slate-50/60">
+            <span class="font-bold text-blue-900 uppercase tracking-wide text-[10px] block mb-1 border-b border-slate-200 pb-1">PIHAK PERTAMA (Yang Menyerahkan)</span>
+            <table class="w-full">
+                <tr><td class="w-24 text-slate-500 py-0.5">Nama Petugas</td><td class="w-2">:</td><td class="font-bold text-slate-900 py-0.5">{{ $penyaluran->nama_petugas ?: 'Tim Satgas Distribusi Air' }}</td></tr>
+                <tr><td class="text-slate-500 py-0.5">No. Armada Tangki</td><td>:</td><td class="font-semibold text-slate-800 py-0.5">{{ $penyaluran->nomor_armada ?: '-' }}</td></tr>
+                <tr><td class="text-slate-500 py-0.5">Sumber Pasokan</td><td>:</td><td class="text-slate-800 py-0.5">{{ $penyaluran->sumber_air ?: 'Depot Penampungan Resmi' }}</td></tr>
+            </table>
+        </div>
+
+        <div class="border border-slate-300 rounded p-3 bg-slate-50/60">
+            <span class="font-bold text-emerald-900 uppercase tracking-wide text-[10px] block mb-1 border-b border-slate-200 pb-1">PIHAK KEDUA (Yang Menerima)</span>
+            <table class="w-full">
+                <tr><td class="w-24 text-slate-500 py-0.5">Nama Penerima</td><td class="w-2">:</td><td class="font-bold text-slate-900 py-0.5">{{ $penyaluran->nama_penerima }}</td></tr>
+                <tr><td class="text-slate-500 py-0.5">No. Kontak / HP</td><td>:</td><td class="text-slate-800 py-0.5">{{ $penyaluran->kontak_penerima ?: '-' }}</td></tr>
+                <tr><td class="text-slate-500 py-0.5">Kelurahan / Lembang</td><td>:</td><td class="text-slate-800 py-0.5">Kel. {{ $penyaluran->kelurahan?->nama ?? '-' }}, Kec. {{ $penyaluran->kecamatan?->nama ?? '-' }}</td></tr>
+            </table>
+        </div>
+    </div>
+
+    <table class="w-full text-[11px] border-collapse border border-slate-300 mb-4">
+        <thead>
+            <tr class="bg-slate-100 text-slate-800">
+                <th class="border border-slate-300 p-1.5 text-center w-8">No</th>
+                <th class="border border-slate-300 p-1.5 text-left">Uraian Program Bantuan</th>
+                <th class="border border-slate-300 p-1.5 text-center">Metode</th>
+                <th class="border border-slate-300 p-1.5 text-center">Sasaran Penerima</th>
+                <th class="border border-slate-300 p-1.5 text-right">Volume</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="border border-slate-300 p-1.5 text-center font-bold">1</td>
+                <td class="border border-slate-300 p-1.5">
+                    <b>Pasokan Air Bersih Siap Pakai & Higienis</b>
+                    <span class="block text-[10px] text-slate-500">Titik: {{ $penyaluran->alamat_detail ?: '-' }}</span>
+                </td>
+                <td class="border border-slate-300 p-1.5 text-center">{{ $penyaluran->metode_distribusi }}</td>
+                <td class="border border-slate-300 p-1.5 text-center">{{ $penyaluran->jumlah_kk }} KK / {{ $penyaluran->jumlah_jiwa }} Jiwa</td>
+                <td class="border border-slate-300 p-1.5 text-right font-black text-xs text-blue-950">
+                    {{ number_format($penyaluran->jumlah_bantuan, 0, ',', '.') }} {{ $penyaluran->satuan }}
+                </td>
+            </tr>
+            <tr class="bg-slate-50 font-semibold">
+                <td colspan="4" class="border border-slate-300 p-1.5 text-right text-slate-700">STATUS REALISASI:</td>
+                <td class="border border-slate-300 p-1.5 text-right font-mono font-bold text-emerald-800">{{ $penyaluran->status }}</td>
+            </tr>
+        </tbody>
     </table>
 
-    <div class="grid grid-cols-3 gap-6 text-center text-xs mt-16 pt-8 border-t border-slate-300">
-        <div>
-            <p class="mb-16">Petugas / Pengemudi</p>
-            <p class="font-bold underline">{{ $penyaluran->nama_petugas ?: '..............................' }}</p>
+    <div class="p-2.5 rounded border border-slate-300 bg-slate-50 text-[10px] leading-relaxed text-slate-800 mb-5">
+        <b>Ketentuan:</b> PIHAK PERTAMA telah menyerahkan dan mendistribusikan bantuan air bersih tersebut kepada PIHAK KEDUA, dan PIHAK KEDUA telah menerima bantuan dengan baik, cukup, dan tanpa dipungut biaya apapun (<b>GRATIS</b>).
+    </div>
+
+    @if($penyaluran->foto_dokumentasi)
+        <div class="mb-4 p-2 border border-slate-200 rounded bg-slate-50/50 break-inside-avoid">
+            <span class="text-[9px] font-bold uppercase tracking-wider text-slate-500 block mb-1">Foto Bukti Dokumentasi Serah Terima:</span>
+            <img src="{{ asset('storage/' . $penyaluran->foto_dokumentasi) }}" alt="Bukti Serah Terima" class="h-24 max-w-xs object-cover rounded border border-slate-300">
         </div>
-        <div>
-            <p class="mb-16">Penanggung Jawab / Penerima</p>
-            <p class="font-bold underline">{{ $penyaluran->nama_penerima }}</p>
+    @endif
+
+    <div class="break-inside-avoid pt-2 text-[11px]">
+        <div class="text-right text-slate-700 mb-3">
+            {{ $penyaluran->kota?->nama ?? 'Toraja Utara' }},
+            {{ \Carbon\Carbon::parse($penyaluran->tanggal_penyaluran ?: $penyaluran->tanggal_rencana)->locale('id')->isoFormat('D MMMM Y') }}
         </div>
-        <div>
-            <p class="mb-16">Mengetahui Kepala Desa / Lurah</p>
-            <p class="font-bold underline">..............................</p>
+        <div class="grid grid-cols-3 gap-4 text-center">
+            <div>
+                <p class="font-medium text-slate-600 mb-0.5">PIHAK PERTAMA</p>
+                <p class="text-[10px] text-slate-500 mb-14">Petugas Satgas Penyalur,</p>
+                <p class="font-bold underline text-slate-950 uppercase">{{ $penyaluran->nama_petugas ?: '( ............................ )' }}</p>
+                <span class="text-[9px] text-slate-500 block">Pengemudi / Petugas Tangki</span>
+            </div>
+            <div>
+                <p class="font-medium text-slate-600 mb-0.5">PIHAK KEDUA</p>
+                <p class="text-[10px] text-slate-500 mb-14">Penerima Manfaat / Warga,</p>
+                <p class="font-bold underline text-slate-950 uppercase">{{ $penyaluran->nama_penerima }}</p>
+                <span class="text-[9px] text-slate-500 block">Penanggung Jawab Lokasi</span>
+            </div>
+            <div>
+                <p class="font-medium text-slate-600 mb-0.5">MENGETAHUI</p>
+                <p class="text-[10px] text-slate-500 mb-14">Pemerintah Desa / Lembang / RT,</p>
+                <p class="font-bold underline text-slate-950">( ............................ )</p>
+                <span class="text-[9px] text-slate-500 block">Kepala Lembang / Tokoh Setempat</span>
+            </div>
         </div>
     </div>
 </div>
 @endsection
+
+@push('styles')
+<style>
+@media print {
+    aside#sidebar, header, #mobileBackdrop, .no-print, [role="alert"] {
+        display: none !important;
+    }
+    body, .flex-1, .h-screen {
+        height: auto !important;
+        overflow: visible !important;
+        background: #ffffff !important;
+    }
+    #screenView {
+        display: none !important;
+    }
+    #printReceipt {
+        display: block !important;
+        padding: 0 !important;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    }
+    @page {
+        size: A4 portrait;
+        margin: 12mm 15mm;
+    }
+}
+</style>
+@endpush
 
 @push('scripts')
 @if($penyaluran->latitude && $penyaluran->longitude && ($penyaluran->latitude != 0 || $penyaluran->longitude != 0))

@@ -171,6 +171,17 @@ class BantuanAirController extends Controller
     }
 
     /**
+     * Display the official handover receipt (BAST) for printing.
+     */
+    public function cetak(int $id): View
+    {
+        $penyaluran = PenyaluranBantuan::with(['kelurahan', 'kecamatan', 'kota', 'provinsi', 'jenisBantuan'])
+            ->findOrFail($id);
+
+        return view('bantuan.air.cetak', compact('penyaluran'));
+    }
+
+    /**
      * Show the form for editing the specified water aid distribution.
      */
     public function edit(int $id): View

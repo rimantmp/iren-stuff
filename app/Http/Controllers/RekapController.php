@@ -3,10 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Models\JenisBantuan;
+use App\Models\Kecamatan;
+use App\Models\Kelurahan;
+use App\Models\Kota;
 use App\Models\PenyaluranBantuan;
 use App\Models\Provinsi;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Pagination\Paginator;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class RekapController extends Controller
 {
@@ -98,5 +104,382 @@ class RekapController extends Controller
         ];
 
         return view('rekap.cetak', compact('laporanList', 'filterInfo'));
+    }
+
+    /**
+     * Display comparison report (Target Rencana vs Realisasi Tersalurkan per Wilayah).
+     */
+    public function perbandingan(Request $request): View
+    {
+        $data = $this->getPerbandinganData($request);
+        $items = $data['items'];
+        $summary = $data['summary'];
+        $selectedKotaId = $data['selected_kota_id'];
+
+        // Pagination setup
+        $perPage = (int) $request->query('per_page', 25);
+        if ($perPage <= 0) {
+            $perPage = 25;
+        }
+
+        $currentPage = Paginator::resolveCurrentPage('page');
+        $currentItems = array_slice($items, ($currentPage - 1) * $perPage, $perPage);
+
+        $paginatedItems = new LengthAwarePaginator(
+            $currentItems,
+            count($items),
+            $perPage,
+            $currentPage,
+            [
+                'path' => Paginator::resolveCurrentPath(),
+                'pageName' => 'page',
+                'query' => $request->query(),
+            ]
+        );
+
+        $semuaJenisBantuan = JenisBantuan::where('status_aktif', true)->get();
+        // Daftar Kabupaten/Kota di Sulawesi Selatan (Dapil Sulsel III / Wilayah Kerja)
+        $semuaKota = Kota::where('id', 'like', '73%')
+            ->orderBy('nama')
+            ->get();
+
+        $kecamatanQuery = Kecamatan::query();
+        if ($selectedKotaId !== 'SEMUA') {
+            $kecamatanQuery->where('id', 'like', $selectedKotaId.'%');
+        } else {
+            $kecamatanQuery->where('id', 'like', '73%');
+        }
+        $semuaKecamatan = $kecamatanQuery->orderBy('nama')->get();
+
+        return view('rekap.perbandingan', compact(
+            'paginatedItems',
+            'summary',
+            'semuaJenisBantuan',
+            'semuaKota',
+            'semuaKecamatan',
+            'selectedKotaId',
+            'perPage'
+        ));
+    }
+
+    /**
+     * Display printable view for comparison report.
+     */
+    public function cetakPerbandingan(Request $request): View
+    {
+        $data = $this->getPerbandinganData($request);
+        $items = $data['items'];
+        $summary = $data['summary'];
+        $selectedKotaId = $data['selected_kota_id'];
+
+        $statusLabel = match ($request->query('filter_status')) {
+            'sudah' => 'Hanya yang Sudah Tersalurkan',
+            'belum' => 'Hanya yang Belum Tersalurkan',
+            'belum_tersentuh' => 'Hanya yang Belum Ada Alokasi',
+            default => 'Semua Wilayah (Sudah & Belum)',
+        };
+
+        $filterInfo = [
+            'jenis' => $request->filled('jenis_bantuan_id') ? JenisBantuan::find($request->query('jenis_bantuan_id'))?->nama : 'Semua Program Bantuan',
+            'kota' => $selectedKotaId !== 'SEMUA' ? Kota::find($selectedKotaId)?->nama : 'Semua Kabupaten/Kota',
+            'kecamatan' => $request->filled('kecamatan_id') ? Kecamatan::find($request->query('kecamatan_id'))?->nama : 'Semua Kecamatan',
+            'status' => $statusLabel,
+            'periode' => ($request->query('tanggal_mulai') ? date('d/m/Y', strtotime($request->query('tanggal_mulai'))) : 'Awal').' s/d '.($request->query('tanggal_akhir') ? date('d/m/Y', strtotime($request->query('tanggal_akhir'))) : 'Sekarang'),
+        ];
+
+        return view('rekap.perbandingan-cetak', compact('items', 'summary', 'filterInfo'));
+    }
+
+    /**
+     * Export comparison data as Excel-compatible CSV.
+     */
+    public function exportPerbandinganExcel(Request $request): StreamedResponse
+    {
+        $data = $this->getPerbandinganData($request);
+        $items = $data['items'];
+        $summary = $data['summary'];
+
+        $filename = 'Laporan-Perbandingan-Penyaluran-'.date('Ymd-His').'.csv';
+
+        $headers = [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+            'Pragma' => 'no-cache',
+            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
+            'Expires' => '0',
+        ];
+
+        return response()->stream(function () use ($items, $summary): void {
+            $output = fopen('php://output', 'w');
+            if ($output === false) {
+                return;
+            }
+
+            // UTF-8 BOM untuk kompatibilitas penuh Microsoft Excel
+            fwrite($output, "\xEF\xBB\xBF");
+
+            // Header Laporan
+            fputcsv($output, ['LAPORAN PERBANDINGAN PENYALURAN BANTUAN SOSIAL (TARGET RENCANA VS REALISASI)']);
+            fputcsv($output, ['SISTEM PENYALURAN BANTUAN SOSIAL - ASPIRASI SULAWESI SELATAN III']);
+            fputcsv($output, ['Tanggal Ekspor', date('d/m/Y H:i').' WIB']);
+            fputcsv($output, []);
+
+            // Baris Judul Kolom
+            fputcsv($output, [
+                'No',
+                'Kabupaten / Kota',
+                'Kecamatan',
+                'Kelurahan / Lembang',
+                'Target Rencana (Titik)',
+                'Target Rencana (Volume Liter)',
+                'Realisasi Tersalurkan (Titik)',
+                'Realisasi Tersalurkan (Volume Liter)',
+                'Sisa Belum Salur (Titik)',
+                'Sisa Belum Salur (Volume Liter)',
+                'Progres Capaian (%)',
+                'Status Pelaksanaan',
+            ]);
+
+            foreach ($items as $idx => $row) {
+                fputcsv($output, [
+                    $idx + 1,
+                    $row['kota'],
+                    $row['kecamatan'],
+                    $row['kelurahan'],
+                    $row['target_titik'],
+                    $row['target_volume'],
+                    $row['realisasi_titik'],
+                    $row['realisasi_volume'],
+                    $row['sisa_titik'],
+                    $row['sisa_volume'],
+                    $row['persentase'].'%',
+                    $row['status_badge'],
+                ]);
+            }
+
+            // Baris Total Akumulatif
+            fputcsv($output, []);
+            fputcsv($output, [
+                'TOTAL',
+                $summary['total_kota'].' Kabupaten/Kota',
+                $summary['total_kecamatan'].' Kecamatan',
+                $summary['total_kelurahan'].' Kelurahan/Lembang',
+                $summary['total_target_titik'],
+                $summary['total_target_volume'],
+                $summary['total_realisasi_titik'],
+                $summary['total_realisasi_volume'],
+                $summary['total_sisa_titik'],
+                $summary['total_sisa_volume'],
+                $summary['total_persentase'].'%',
+                $summary['total_persentase'] >= 100 ? 'Selesai 100%' : 'Dalam Proses',
+            ]);
+
+            fclose($output);
+        }, 200, $headers);
+    }
+
+    /**
+     * Helper to compute comparison dataset grouped by Kota, Kecamatan, and Kelurahan.
+     * Includes all administrative regions (both serviced and unserviced/blank spots).
+     *
+     * @return array{items: array<int, array<string, mixed>>, summary: array<string, mixed>, selected_kota_id: string}
+     */
+    private function getPerbandinganData(Request $request): array
+    {
+        // Default ke Kabupaten Toraja Utara (7326) jika tidak dipilih atau jika baru pertama kali buka
+        $kotaId = $request->query('kota_id', '7326');
+        $kotaObj = Kota::find($kotaId);
+        $defaultKotaNama = $kotaObj?->nama ?? 'Kabupaten Toraja Utara';
+
+        // Ambil data transaksi yang ada di database
+        $queryTx = PenyaluranBantuan::with(['jenisBantuan', 'provinsi', 'kota', 'kecamatan', 'kelurahan']);
+
+        if ($request->filled('jenis_bantuan_id')) {
+            $queryTx->where('jenis_bantuan_id', $request->query('jenis_bantuan_id'));
+        }
+
+        if ($request->filled('tanggal_mulai')) {
+            $queryTx->whereDate('tanggal_rencana', '>=', $request->query('tanggal_mulai'));
+        }
+
+        if ($request->filled('tanggal_akhir')) {
+            $queryTx->whereDate('tanggal_rencana', '<=', $request->query('tanggal_akhir'));
+        }
+
+        if ($kotaId !== 'SEMUA') {
+            $queryTx->where('kota_id', $kotaId);
+        }
+
+        if ($request->filled('kecamatan_id')) {
+            $queryTx->where('kecamatan_id', $request->query('kecamatan_id'));
+        }
+
+        $allTxRecords = $queryTx->get();
+        $txByKelurahan = $allTxRecords->groupBy('kelurahan_id');
+
+        // Master Wilayah Kelurahan
+        $kelurahanQuery = Kelurahan::query();
+        if ($kotaId !== 'SEMUA') {
+            $kelurahanQuery->where('id', 'like', $kotaId.'%');
+        } else {
+            // Jika SEMUA dipilih, ambil kelurahan yang memiliki transaksi
+            $kelurahanQuery->whereIn('id', $txByKelurahan->keys());
+        }
+
+        if ($request->filled('kecamatan_id')) {
+            $kelurahanQuery->where('id', 'like', $request->query('kecamatan_id').'%');
+        }
+
+        $allMasterKelurahan = $kelurahanQuery->orderBy('id')->get();
+
+        // Peta nama kecamatan untuk lookup
+        $prefix = $kotaId !== 'SEMUA' ? $kotaId : '73';
+        $kecamatansMap = Kecamatan::where('id', 'like', $prefix.'%')
+            ->get()
+            ->keyBy('id');
+
+        // Peta nama kota untuk lookup
+        $kotaMap = Kota::where('id', 'like', '73%')->get()->keyBy('id');
+
+        $items = [];
+        $totalTargetTitik = 0;
+        $totalTargetVolume = 0;
+        $totalRealisasiTitik = 0;
+        $totalRealisasiVolume = 0;
+        $totalSisaTitik = 0;
+        $totalSisaVolume = 0;
+        $countDesaSelesai = 0;
+        $countDesaSebagian = 0;
+        $countDesaRencana = 0;
+        $countDesaBelum = 0;
+
+        foreach ($allMasterKelurahan as $kel) {
+            $kId = (string) $kel->id;
+            $kecId = substr($kId, 0, 6);
+            $regencyId = substr($kId, 0, 4);
+
+            $thisKotaNama = $kotaMap->get($regencyId)?->nama ?? $defaultKotaNama;
+            $thisKecNama = $kecamatansMap->get($kecId)?->nama ?? ('Kecamatan '.$kecId);
+
+            $records = $txByKelurahan->get($kId, collect());
+
+            $targetTitik = $records->count();
+            $targetVolume = (float) $records->sum('jumlah_bantuan');
+
+            $tersalurkan = $records->where('status', 'TERSALURKAN');
+            $realisasiTitik = $tersalurkan->count();
+            $realisasiVolume = (float) $tersalurkan->sum('jumlah_bantuan');
+
+            $sisaTitik = max(0, $targetTitik - $realisasiTitik);
+            $sisaVolume = max(0.0, $targetVolume - $realisasiVolume);
+
+            $persentase = $targetVolume > 0 ? round(($realisasiVolume / $targetVolume) * 100, 1) : 0.0;
+
+            if ($targetTitik === 0) {
+                $statusBadge = 'Belum Tersentuh';
+                $statusColor = 'slate';
+                $countDesaBelum++;
+            } elseif ($persentase >= 100) {
+                $statusBadge = 'Selesai';
+                $statusColor = 'emerald';
+                $countDesaSelesai++;
+            } elseif ($realisasiTitik > 0) {
+                $statusBadge = 'Sebagian';
+                $statusColor = 'blue';
+                $countDesaSebagian++;
+            } else {
+                $statusBadge = 'Rencana';
+                $statusColor = 'amber';
+                $countDesaRencana++;
+            }
+
+            $satuan = $records->first()?->satuan ?: 'Liter';
+
+            $item = [
+                'kota_id' => $regencyId,
+                'kota' => $thisKotaNama,
+                'kecamatan_id' => $kecId,
+                'kecamatan' => $thisKecNama,
+                'kelurahan_id' => $kId,
+                'kelurahan' => $kel->nama,
+                'target_titik' => $targetTitik,
+                'target_volume' => $targetVolume,
+                'realisasi_titik' => $realisasiTitik,
+                'realisasi_volume' => $realisasiVolume,
+                'sisa_titik' => $sisaTitik,
+                'sisa_volume' => $sisaVolume,
+                'persentase' => $persentase,
+                'status_badge' => $statusBadge,
+                'status_color' => $statusColor,
+                'satuan' => $satuan,
+            ];
+
+            // Filter Ketercakupan Status
+            $filterStatus = $request->query('filter_status');
+            if ($filterStatus === 'sudah' && $realisasiTitik === 0) {
+                continue; // Hanya yang sudah tersalurkan (realisasi > 0)
+            }
+            if ($filterStatus === 'belum' && $realisasiTitik > 0) {
+                continue; // Hanya yang belum tersalurkan (realisasi == 0)
+            }
+            if ($filterStatus === 'belum_tersentuh' && $statusBadge !== 'Belum Tersentuh') {
+                continue; // Hanya yang blank spot / belum ada alokasi sama sekali
+            }
+
+            $items[] = $item;
+
+            $totalTargetTitik += $targetTitik;
+            $totalTargetVolume += $targetVolume;
+            $totalRealisasiTitik += $realisasiTitik;
+            $totalRealisasiVolume += $realisasiVolume;
+            $totalSisaTitik += $sisaTitik;
+            $totalSisaVolume += $sisaVolume;
+        }
+
+        // Urutkan berdasarkan Nama Kabupaten/Kota, lalu Nama Kecamatan, lalu Nama Kelurahan
+        usort($items, function (array $a, array $b): int {
+            $cmpKota = strcmp($a['kota'], $b['kota']);
+            if ($cmpKota !== 0) {
+                return $cmpKota;
+            }
+
+            $cmpKec = strcmp($a['kecamatan'], $b['kecamatan']);
+            if ($cmpKec !== 0) {
+                return $cmpKec;
+            }
+
+            return strcmp($a['kelurahan'], $b['kelurahan']);
+        });
+
+        $totalPersentase = $totalTargetVolume > 0 ? round(($totalRealisasiVolume / $totalTargetVolume) * 100, 1) : 0.0;
+
+        $uniqueKota = count(array_unique(array_column($items, 'kota')));
+        $uniqueKecamatan = count(array_unique(array_column($items, 'kecamatan')));
+        $uniqueKelurahan = count($items);
+
+        $totalDesaTersalur = $countDesaSelesai + $countDesaSebagian;
+
+        return [
+            'items' => $items,
+            'summary' => [
+                'total_kota' => $uniqueKota,
+                'total_kecamatan' => $uniqueKecamatan,
+                'total_kelurahan' => $uniqueKelurahan,
+                'total_target_titik' => $totalTargetTitik,
+                'total_target_volume' => $totalTargetVolume,
+                'total_realisasi_titik' => $totalRealisasiTitik,
+                'total_realisasi_volume' => $totalRealisasiVolume,
+                'total_sisa_titik' => $totalSisaTitik,
+                'total_sisa_volume' => $totalSisaVolume,
+                'total_persentase' => $totalPersentase,
+                'desa_tersalur' => $totalDesaTersalur,
+                'desa_belum_tersalur' => $countDesaRencana + $countDesaBelum,
+                'desa_selesai' => $countDesaSelesai,
+                'desa_sebagian' => $countDesaSebagian,
+                'desa_rencana' => $countDesaRencana,
+                'desa_blank' => $countDesaBelum,
+            ],
+            'selected_kota_id' => $kotaId,
+        ];
     }
 }

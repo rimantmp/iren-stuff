@@ -106,4 +106,49 @@ class BantuanAirTest extends TestCase
         $responsePatch->assertRedirect();
         $this->assertEquals('PROSES', $penyaluran->fresh()->status);
     }
+
+    public function test_authenticated_user_can_access_bantuan_air_cetak_bast(): void
+    {
+        $user = User::factory()->create();
+        $air = JenisBantuan::where('slug', 'air')->first();
+
+        Kelurahan::firstOrCreate(
+            ['id' => '7326011002'],
+            ['nama' => 'Rantepao', 'latitude' => -2.97566, 'longitude' => 119.89841]
+        );
+
+        $penyaluran = PenyaluranBantuan::create([
+            'kode_transaksi' => 'BA-202610-8888',
+            'jenis_bantuan_id' => $air->id,
+            'provinsi_id' => '73',
+            'kota_id' => '7326',
+            'kecamatan_id' => '732601',
+            'kelurahan_id' => '7326011002',
+            'alamat_detail' => 'Dusun Karassik',
+            'latitude' => -2.97566,
+            'longitude' => 119.89841,
+            'nama_penerima' => 'Martha Rante',
+            'kontak_penerima' => '081299988877',
+            'jumlah_kk' => 45,
+            'jumlah_jiwa' => 180,
+            'jumlah_bantuan' => 10000,
+            'satuan' => 'Liter',
+            'tanggal_rencana' => '2026-10-12',
+            'tanggal_penyaluran' => '2026-10-12',
+            'status' => 'TERSALURKAN',
+            'nomor_armada' => 'DP 9999 TA',
+            'nama_petugas' => 'Petrus Salu',
+        ]);
+
+        $response = $this->actingAs($user)->get(route('bantuan.air.cetak', $penyaluran->id));
+
+        $response->assertStatus(200);
+        $response->assertSee('BERITA ACARA SERAH TERIMA (BAST)');
+        $response->assertSee('BA-202610-8888');
+        $response->assertSee('Martha Rante');
+        $response->assertSee('10.000 Liter');
+        $response->assertSee('Petrus Salu');
+        $response->assertSee('PIHAK PERTAMA');
+        $response->assertSee('PIHAK KEDUA');
+    }
 }
