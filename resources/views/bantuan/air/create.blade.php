@@ -307,10 +307,11 @@
 
                         <div>
                             <label class="block font-medium text-slate-800 mb-1" for="jumlah_kk">
-                                Estimasi Jumlah KK Terbantu <span class="text-rose-600">*</span>
+                                Estimasi Jumlah KK Terbantu <span class="text-[10px] text-slate-400 font-normal">(Opsional)</span>
                             </label>
                             <div class="flex items-center space-x-2">
-                                <input type="number" id="jumlah_kk" name="jumlah_kk" value="{{ old('jumlah_kk', 25) }}" min="1" required
+                                <input type="number" id="jumlah_kk" name="jumlah_kk" value="{{ old('jumlah_kk') }}" min="0"
+                                       placeholder="Contoh: 25 (opsional)"
                                        class="w-full px-3 py-2 rounded border border-slate-300 focus:border-blue-600 focus:ring-1 focus:ring-blue-600 outline-none transition">
                                 <span class="text-slate-500 font-medium">KK</span>
                             </div>
@@ -319,14 +320,15 @@
                         <div>
                             <div class="flex items-center justify-between mb-1">
                                 <label class="font-medium text-slate-800" for="jumlah_jiwa">
-                                    Estimasi Total Jiwa Terbantu <span class="text-rose-600">*</span>
+                                    Estimasi Total Jiwa Terbantu <span class="text-[10px] text-slate-400 font-normal">(Opsional)</span>
                                 </label>
-                                <span id="ratioDisplay" class="text-[11px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
-                                    ~50 L / Jiwa
+                                <span id="ratioDisplay" class="text-[11px] font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                                    - L / Jiwa
                                 </span>
                             </div>
                             <div class="flex items-center space-x-2">
-                                <input type="number" id="jumlah_jiwa" name="jumlah_jiwa" value="{{ old('jumlah_jiwa', 100) }}" min="1" required
+                                <input type="number" id="jumlah_jiwa" name="jumlah_jiwa" value="{{ old('jumlah_jiwa') }}" min="0"
+                                       placeholder="Contoh: 100 (opsional)"
                                        class="w-full px-3 py-2 rounded border border-slate-300 focus:border-blue-600 focus:ring-1 focus:ring-blue-600 outline-none transition">
                                 <span class="text-slate-500 font-medium">Jiwa</span>
                             </div>
@@ -351,19 +353,19 @@
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div>
                             <label class="block font-medium text-slate-800 mb-1" for="nomor_armada">
-                                Nomor Plat Truk Tangki
+                                Nomor Plat Truk Tangki <span class="text-[10px] text-slate-400 font-normal">(Opsional)</span>
                             </label>
                             <input type="text" id="nomor_armada" name="nomor_armada" value="{{ old('nomor_armada') }}"
-                                   placeholder="Contoh: B 9123 TDA"
+                                   placeholder="Contoh: DP 8123 TA (opsional)"
                                    class="w-full px-3 py-2 rounded border border-slate-300 outline-none focus:border-blue-600">
                         </div>
 
                         <div>
                             <label class="block font-medium text-slate-800 mb-1" for="nama_petugas">
-                                Nama Pengemudi / Petugas
+                                Nama Pengemudi / Petugas <span class="text-[10px] text-slate-400 font-normal">(Opsional)</span>
                             </label>
                             <input type="text" id="nama_petugas" name="nama_petugas" value="{{ old('nama_petugas') }}"
-                                   placeholder="Contoh: Asep Saepudin"
+                                   placeholder="Contoh: Markus (opsional)"
                                    class="w-full px-3 py-2 rounded border border-slate-300 outline-none focus:border-blue-600">
                         </div>
 
@@ -464,11 +466,11 @@
                     <div class="grid grid-cols-2 gap-2 text-center">
                         <div class="bg-slate-50 rounded p-2 border border-slate-200">
                             <span class="text-[10px] text-slate-500 block">Penerima KK</span>
-                            <span id="summaryKk" class="font-bold text-slate-900 font-mono text-sm">25 KK</span>
+                            <span id="summaryKk" class="font-bold text-slate-900 font-mono text-sm">-</span>
                         </div>
                         <div class="bg-slate-50 rounded p-2 border border-slate-200">
                             <span class="text-[10px] text-slate-500 block">Total Jiwa</span>
-                            <span id="summaryJiwa" class="font-bold text-slate-900 font-mono text-sm">100 Jiwa</span>
+                            <span id="summaryJiwa" class="font-bold text-slate-900 font-mono text-sm">-</span>
                         </div>
                     </div>
 
@@ -764,11 +766,15 @@
 
     function updateRatioCalculation() {
         const vol = parseFloat($('#jumlah_bantuan').val()) || 0;
-        const jiwa = parseInt($('#jumlah_jiwa').val()) || 1;
-        const ratio = Math.max(1, Math.round(vol / jiwa));
-
-        $('#ratioDisplay').text(`~${ratio} L / Jiwa`);
-        $('#summaryRatio').text(`Kebutuhan ~${ratio} L per jiwa`);
+        const jiwa = parseInt($('#jumlah_jiwa').val()) || 0;
+        if (jiwa > 0) {
+            const ratio = Math.max(1, Math.round(vol / jiwa));
+            $('#ratioDisplay').text(`~${ratio} L / Jiwa`).removeClass('bg-slate-100 text-slate-600 border-slate-200').addClass('bg-blue-50 text-blue-700 border-blue-200');
+            $('#summaryRatio').text(`Kebutuhan ~${ratio} L per jiwa`);
+        } else {
+            $('#ratioDisplay').text(`- L / Jiwa`).removeClass('bg-blue-50 text-blue-700 border-blue-200').addClass('bg-slate-100 text-slate-600 border-slate-200');
+            $('#summaryRatio').text(`Estimasi jiwa belum diisi`);
+        }
         $('#summaryVolume').text(vol.toLocaleString('id-ID'));
     }
 
@@ -795,13 +801,13 @@
         $('#jumlah_bantuan, #jumlah_jiwa').on('input change', updateRatioCalculation);
 
         $('#jumlah_kk').on('input change', function() {
-            const val = $(this).val() || '0';
-            $('#summaryKk').text(val + ' KK');
+            const val = $(this).val();
+            $('#summaryKk').text(val ? val + ' KK' : '-');
         });
 
         $('#jumlah_jiwa').on('input change', function() {
-            const val = $(this).val() || '0';
-            $('#summaryJiwa').text(val + ' Jiwa');
+            const val = $(this).val();
+            $('#summaryJiwa').text(val ? val + ' Jiwa' : '-');
         });
 
         $('#alamat_detail').on('input change', function() {

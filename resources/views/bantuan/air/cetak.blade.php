@@ -218,7 +218,11 @@
                             {{ $penyaluran->metode_distribusi }}
                         </td>
                         <td class="border border-slate-300 p-2 text-center font-medium">
-                            {{ $penyaluran->jumlah_kk }} KK / {{ $penyaluran->jumlah_jiwa }} Jiwa
+                            @if($penyaluran->jumlah_kk || $penyaluran->jumlah_jiwa)
+                                {{ $penyaluran->jumlah_kk ? $penyaluran->jumlah_kk . ' KK' : '' }}{{ ($penyaluran->jumlah_kk && $penyaluran->jumlah_jiwa) ? ' / ' : '' }}{{ $penyaluran->jumlah_jiwa ? $penyaluran->jumlah_jiwa . ' Jiwa' : '' }}
+                            @else
+                                Warga Setempat
+                            @endif
                         </td>
                         <td class="border border-slate-300 p-2 text-right font-black text-sm text-blue-950">
                             {{ number_format($penyaluran->jumlah_bantuan, 0, ',', '.') }} {{ $penyaluran->satuan }}

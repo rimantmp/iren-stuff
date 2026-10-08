@@ -137,20 +137,31 @@
         <div class="bg-white rounded-lg p-4 border border-slate-200 shadow-sm">
             <span class="text-xs text-slate-500 font-medium block">Penerima Manfaat</span>
             <div class="flex items-baseline space-x-1.5 mt-1">
-                <span class="text-2xl font-black text-slate-900 font-mono">{{ $penyaluran->jumlah_kk }}</span>
-                <span class="text-xs font-semibold text-slate-600">KK ({{ $penyaluran->jumlah_jiwa }} Jiwa)</span>
+                @if($penyaluran->jumlah_kk || $penyaluran->jumlah_jiwa)
+                    <span class="text-2xl font-black text-slate-900 font-mono">{{ $penyaluran->jumlah_kk ?: '-' }}</span>
+                    <span class="text-xs font-semibold text-slate-600">KK ({{ $penyaluran->jumlah_jiwa ?: '-' }} Jiwa)</span>
+                @else
+                    <span class="text-base font-bold text-slate-700">Warga Setempat</span>
+                @endif
             </div>
-            <span class="text-[11px] text-slate-500 block mt-0.5">Penanggung jawab terdata</span>
+            <span class="text-[11px] text-slate-500 block mt-0.5">Penanggung jawab: {{ $penyaluran->nama_penerima }}</span>
         </div>
 
         @php
-            $rasio = round($penyaluran->jumlah_bantuan / max(1, $penyaluran->jumlah_jiwa));
+            $rasio = ($penyaluran->jumlah_jiwa && $penyaluran->jumlah_jiwa > 0)
+                ? round($penyaluran->jumlah_bantuan / $penyaluran->jumlah_jiwa)
+                : null;
         @endphp
         <div class="bg-white rounded-lg p-4 border border-slate-200 shadow-sm">
             <span class="text-xs text-slate-500 font-medium block">Rasio Pemenuhan per Jiwa</span>
             <div class="flex items-baseline space-x-1.5 mt-1">
-                <span class="text-2xl font-black text-emerald-800 font-mono">~{{ $rasio }}</span>
-                <span class="text-xs font-semibold text-emerald-700">Liter / Jiwa</span>
+                @if($rasio !== null)
+                    <span class="text-2xl font-black text-emerald-800 font-mono">~{{ $rasio }}</span>
+                    <span class="text-xs font-semibold text-emerald-700">Liter / Jiwa</span>
+                @else
+                    <span class="text-xl font-bold text-slate-400 font-mono">-</span>
+                    <span class="text-xs text-slate-400">Jiwa tidak diisi</span>
+                @endif
             </div>
             <span class="text-[11px] text-slate-500 block mt-0.5">Standar darurat: 15 s/d 20 L/hari</span>
         </div>

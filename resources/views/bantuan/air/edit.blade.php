@@ -103,19 +103,19 @@
 
                     <div>
                         <label class="block font-medium text-slate-700 mb-1" for="jumlah_kk">
-                            Jumlah KK Terbantu <span class="text-rose-500">*</span>
+                            Jumlah KK Terbantu <span class="text-[10px] text-slate-400 font-normal">(Opsional)</span>
                         </label>
                         <input type="number" id="jumlah_kk" name="jumlah_kk"
-                               value="{{ old('jumlah_kk', $penyaluran->jumlah_kk) }}" min="1" required
+                               value="{{ old('jumlah_kk', $penyaluran->jumlah_kk) }}" min="0" placeholder="Opsional"
                                class="w-full px-3 py-2 rounded border border-slate-300 focus:border-blue-600 outline-none">
                     </div>
 
                     <div>
                         <label class="block font-medium text-slate-700 mb-1" for="jumlah_jiwa">
-                            Jumlah Jiwa Terbantu <span class="text-rose-500">*</span>
+                            Jumlah Jiwa Terbantu <span class="text-[10px] text-slate-400 font-normal">(Opsional)</span>
                         </label>
                         <input type="number" id="jumlah_jiwa" name="jumlah_jiwa"
-                               value="{{ old('jumlah_jiwa', $penyaluran->jumlah_jiwa) }}" min="1" required
+                               value="{{ old('jumlah_jiwa', $penyaluran->jumlah_jiwa) }}" min="0" placeholder="Opsional"
                                class="w-full px-3 py-2 rounded border border-slate-300 focus:border-blue-600 outline-none">
                     </div>
                 </div>
@@ -156,19 +156,21 @@
 
                     <div>
                         <label class="block font-medium text-slate-700 mb-1" for="nomor_armada">
-                            Plat Truk Tangki
+                            Plat Truk Tangki <span class="text-[10px] text-slate-400 font-normal">(Opsional)</span>
                         </label>
                         <input type="text" id="nomor_armada" name="nomor_armada"
                                value="{{ old('nomor_armada', $penyaluran->nomor_armada) }}"
+                               placeholder="Contoh: DP 8123 TA (opsional)"
                                class="w-full px-3 py-2 rounded border border-slate-300 focus:border-blue-600 outline-none">
                     </div>
 
                     <div>
                         <label class="block font-medium text-slate-700 mb-1" for="nama_petugas">
-                            Petugas / Pengemudi
+                            Petugas / Pengemudi <span class="text-[10px] text-slate-400 font-normal">(Opsional)</span>
                         </label>
                         <input type="text" id="nama_petugas" name="nama_petugas"
                                value="{{ old('nama_petugas', $penyaluran->nama_petugas) }}"
+                               placeholder="Contoh: Markus (opsional)"
                                class="w-full px-3 py-2 rounded border border-slate-300 focus:border-blue-600 outline-none">
                     </div>
 

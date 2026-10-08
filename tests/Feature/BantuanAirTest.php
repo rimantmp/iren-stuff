@@ -188,4 +188,40 @@ class BantuanAirTest extends TestCase
             'tanggal_penyaluran' => '2026-10-26 00:00:00',
         ]);
     }
+
+    public function test_can_store_bantuan_air_with_empty_optional_fields(): void
+    {
+        $user = User::factory()->create();
+
+        Kelurahan::firstOrCreate(
+            ['id' => '7326011002'],
+            ['nama' => 'Rantepao', 'latitude' => -2.97566, 'longitude' => 119.89841]
+        );
+
+        $response = $this->actingAs($user)->post(route('bantuan.air.store'), [
+            'nama_penerima' => 'Posko Mandiri',
+            'provinsi_id' => '73',
+            'kota_id' => '7326',
+            'kecamatan_id' => '732601',
+            'kelurahan_id' => '7326011002',
+            'jumlah_bantuan' => 3000,
+            'satuan' => 'Liter',
+            'tanggal_rencana' => '2026-10-20',
+            'status' => 'RENCANA',
+            // Field optional dikosongkan
+            'jumlah_kk' => null,
+            'jumlah_jiwa' => null,
+            'nomor_armada' => null,
+            'nama_petugas' => null,
+        ]);
+
+        $response->assertRedirect(route('bantuan.air.index'));
+        $this->assertDatabaseHas('penyaluran_bantuan', [
+            'nama_penerima' => 'Posko Mandiri',
+            'jumlah_kk' => null,
+            'jumlah_jiwa' => null,
+            'nomor_armada' => null,
+            'nama_petugas' => null,
+        ]);
+    }
 }
