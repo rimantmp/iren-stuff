@@ -20,15 +20,28 @@ class MasterWilayahController extends Controller
     {
         $query = Provinsi::query();
 
+        if ($request->filled('status')) {
+            if ($request->query('status') === 'aktif') {
+                $query->where('status_aktif', true);
+            } elseif ($request->query('status') === 'nonaktif') {
+                $query->where('status_aktif', false);
+            }
+        }
+
         if ($request->filled('search')) {
             $search = $request->query('search');
-            $query->where('nama', 'like', "%{$search}%")
-                ->orWhere('id', 'like', "%{$search}%");
+            $query->where(function ($q) use ($search): void {
+                $q->where('nama', 'like', "%{$search}%")
+                    ->orWhere('id', 'like', "%{$search}%");
+            });
         }
 
         $items = $query->orderBy('id')->paginate(15)->withQueryString();
 
-        return view('master.provinsi', compact('items'));
+        $totalAktif = Provinsi::where('status_aktif', true)->count();
+        $totalNonaktif = Provinsi::where('status_aktif', false)->count();
+
+        return view('master.provinsi', compact('items', 'totalAktif', 'totalNonaktif'));
     }
 
     public function updateProvinsi(Request $request, string $id): RedirectResponse
@@ -38,11 +51,51 @@ class MasterWilayahController extends Controller
             'nama' => ['required', 'string', 'max:100'],
             'latitude' => ['nullable', 'numeric'],
             'longitude' => ['nullable', 'numeric'],
+            'status_aktif' => ['nullable', 'boolean'],
         ]);
 
         $provinsi->update($validated);
 
         return back()->with('success', "Data provinsi {$provinsi->nama} berhasil diperbarui!");
+    }
+
+    public function toggleProvinsi(string $id): RedirectResponse
+    {
+        $provinsi = Provinsi::findOrFail($id);
+        $provinsi->status_aktif = ! $provinsi->status_aktif;
+        $provinsi->save();
+
+        $statusText = $provinsi->status_aktif ? 'diaktifkan' : 'dinonaktifkan';
+
+        return back()->with('success', "Provinsi {$provinsi->nama} berhasil {$statusText}!");
+    }
+
+    public function batchUpdateStatusProvinsi(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'action' => ['required', 'in:activate_all,deactivate_all,preset_sulsel'],
+        ]);
+
+        if ($validated['action'] === 'preset_sulsel') {
+            Provinsi::where('id', '!=', '73')->update(['status_aktif' => false]);
+            Provinsi::where('id', '73')->update(['status_aktif' => true]);
+
+            return back()->with('success', 'Preset Wilayah diterapkan: Hanya Provinsi Sulawesi Selatan yang aktif.');
+        }
+
+        if ($validated['action'] === 'activate_all') {
+            Provinsi::query()->update(['status_aktif' => true]);
+
+            return back()->with('success', 'Semua 38 provinsi berhasil diaktifkan.');
+        }
+
+        if ($validated['action'] === 'deactivate_all') {
+            Provinsi::query()->update(['status_aktif' => false]);
+
+            return back()->with('success', 'Semua provinsi dinonaktifkan.');
+        }
+
+        return back();
     }
 
     /**
@@ -56,16 +109,29 @@ class MasterWilayahController extends Controller
             $query->where('id', 'like', $request->query('provinsi_id').'%');
         }
 
+        if ($request->filled('status')) {
+            if ($request->query('status') === 'aktif') {
+                $query->where('status_aktif', true);
+            } elseif ($request->query('status') === 'nonaktif') {
+                $query->where('status_aktif', false);
+            }
+        }
+
         if ($request->filled('search')) {
             $search = $request->query('search');
-            $query->where('nama', 'like', "%{$search}%")
-                ->orWhere('id', 'like', "%{$search}%");
+            $query->where(function ($q) use ($search): void {
+                $q->where('nama', 'like', "%{$search}%")
+                    ->orWhere('id', 'like', "%{$search}%");
+            });
         }
 
         $items = $query->orderBy('id')->paginate(20)->withQueryString();
         $provinsiList = Provinsi::orderBy('nama')->get();
 
-        return view('master.kota', compact('items', 'provinsiList'));
+        $totalAktif = Kota::where('status_aktif', true)->count();
+        $totalNonaktif = Kota::where('status_aktif', false)->count();
+
+        return view('master.kota', compact('items', 'provinsiList', 'totalAktif', 'totalNonaktif'));
     }
 
     public function updateKota(Request $request, string $id): RedirectResponse
@@ -75,11 +141,63 @@ class MasterWilayahController extends Controller
             'nama' => ['required', 'string', 'max:100'],
             'latitude' => ['nullable', 'numeric'],
             'longitude' => ['nullable', 'numeric'],
+            'status_aktif' => ['nullable', 'boolean'],
         ]);
 
         $kota->update($validated);
 
         return back()->with('success', "Data kota {$kota->nama} berhasil diperbarui!");
+    }
+
+    public function toggleKota(string $id): RedirectResponse
+    {
+        $kota = Kota::findOrFail($id);
+        $kota->status_aktif = ! $kota->status_aktif;
+        $kota->save();
+
+        $statusText = $kota->status_aktif ? 'diaktifkan' : 'dinonaktifkan';
+
+        return back()->with('success', "Kota/Kabupaten {$kota->nama} berhasil {$statusText}!");
+    }
+
+    public function batchUpdateStatusKota(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'provinsi_id' => ['nullable', 'string'],
+            'action' => ['required', 'in:activate_all,deactivate_all,preset_toraja'],
+        ]);
+
+        if ($validated['action'] === 'preset_toraja') {
+            Provinsi::where('id', '!=', '73')->update(['status_aktif' => false]);
+            Provinsi::where('id', '73')->update(['status_aktif' => true]);
+
+            Kota::query()->update(['status_aktif' => false]);
+            Kota::whereIn('id', ['7318', '7326'])->update(['status_aktif' => true]);
+
+            return back()->with('success', 'Preset Wilayah diterapkan: Provinsi Sulawesi Selatan aktif, Kabupaten aktif hanya Tana Toraja (7318) dan Toraja Utara (7326).');
+        }
+
+        if ($validated['action'] === 'activate_all') {
+            $query = Kota::query();
+            if ($request->filled('provinsi_id')) {
+                $query->where('id', 'like', $request->query('provinsi_id').'%');
+            }
+            $query->update(['status_aktif' => true]);
+
+            return back()->with('success', 'Semua kota/kabupaten pada filter yang dipilih berhasil diaktifkan.');
+        }
+
+        if ($validated['action'] === 'deactivate_all') {
+            $query = Kota::query();
+            if ($request->filled('provinsi_id')) {
+                $query->where('id', 'like', $request->query('provinsi_id').'%');
+            }
+            $query->update(['status_aktif' => false]);
+
+            return back()->with('success', 'Semua kota/kabupaten pada filter yang dipilih berhasil dinonaktifkan.');
+        }
+
+        return back();
     }
 
     /**

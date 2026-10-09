@@ -122,6 +122,7 @@
                     <th class="border border-slate-300 p-2">Kabupaten / Kota</th>
                     <th class="border border-slate-300 p-2">Kecamatan</th>
                     <th class="border border-slate-300 p-2">Kelurahan / Lembang</th>
+                    <th class="border border-slate-300 p-2">Dusun / Lembang</th>
                     <th class="border border-slate-300 p-2 text-center">Target Rencana (Titik)</th>
                     <th class="border border-slate-300 p-2 text-right">Target Volume</th>
                     <th class="border border-slate-300 p-2 text-center">Realisasi (Titik)</th>
@@ -143,12 +144,10 @@
                             {{ $row['kecamatan'] }}
                         </td>
                         <td class="border border-slate-300 p-2 text-slate-800">
-                            <span class="font-bold block text-slate-900">{{ $row['kelurahan'] }}</span>
-                            @if(!empty($row['dusun_names']))
-                                <span class="text-[9px] text-slate-600 block mt-0.5">
-                                    Dusun: {{ implode(', ', $row['dusun_names']) }}
-                                </span>
-                            @endif
+                            {{ $row['kelurahan'] }}
+                        </td>
+                        <td class="border border-slate-300 p-2 text-slate-900 {{ $row['is_dusun'] ? 'font-bold' : 'italic text-slate-400' }}">
+                            {{ $row['dusun'] }}
                         </td>
                         <td class="border border-slate-300 p-2 text-center">
                             {{ $row['target_titik'] }} Titik
@@ -177,7 +176,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="12" class="border border-slate-300 p-6 text-center text-slate-400">
+                        <td colspan="13" class="border border-slate-300 p-6 text-center text-slate-400">
                             Tidak ada data penyaluran pada parameter filter ini.
                         </td>
                     </tr>
@@ -186,7 +185,7 @@
             @if(count($items) > 0)
                 <tfoot class="bg-slate-100 font-bold text-slate-900 text-xs border-t-2 border-slate-400">
                     <tr>
-                        <td colspan="4" class="border border-slate-300 p-2 text-left uppercase">
+                        <td colspan="5" class="border border-slate-300 p-2 text-left uppercase">
                             TOTAL KESELURUHAN ({{ $summary['total_kota'] }} Kab. / {{ $summary['total_kecamatan'] }} Kec. / {{ $summary['total_kelurahan'] }} Desa)
                         </td>
                         <td class="border border-slate-300 p-2 text-center font-bold">

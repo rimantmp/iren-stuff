@@ -203,4 +203,54 @@ class RekapPerbandinganTest extends TestCase
         // File XLSX diawali dengan zip magic byte PK (0x50 0x4B)
         $this->assertStringStartsWith('PK', $content);
     }
+
+    public function test_perbandingan_displays_detailed_rows_for_each_dusun_both_serviced_and_unserviced(): void
+    {
+        $user = User::factory()->create();
+        $air = JenisBantuan::where('slug', 'air')->first();
+
+        // Dusun 1: Sudah ada penyaluran
+        $dusun1 = Dusun::create([
+            'kelurahan_id' => '7326011002',
+            'nama' => 'Dusun Batulelleng (Sudah)',
+        ]);
+
+        // Dusun 2: Belum ada penyaluran (blank spot / nihil)
+        $dusun2 = Dusun::create([
+            'kelurahan_id' => '7326011002',
+            'nama' => 'Dusun Kandora (Belum)',
+        ]);
+
+        PenyaluranBantuan::create([
+            'kode_transaksi' => 'BA-202610-1234',
+            'jenis_bantuan_id' => $air->id,
+            'provinsi_id' => '73',
+            'kota_id' => '7326',
+            'kecamatan_id' => '732601',
+            'kelurahan_id' => '7326011002',
+            'dusun_id' => $dusun1->id,
+            'nama_penerima' => 'Warga Batulelleng',
+            'jumlah_bantuan' => 3000,
+            'satuan' => 'Liter',
+            'tanggal_rencana' => '2026-10-20',
+            'status' => 'TERSALURKAN',
+        ]);
+
+        $response = $this->actingAs($user)->get(route('rekap.perbandingan'));
+        $response->assertStatus(200);
+
+        // Dusun 1 (Sudah) harus tampil dengan data realisasinya
+        $response->assertSee('Dusun Batulelleng (Sudah)');
+        $response->assertSee('3.000 Liter');
+
+        // Dusun 2 (Belum) harus tetap tampil dengan status Belum Tersentuh
+        $response->assertSee('Dusun Kandora (Belum)');
+        $response->assertSee('Belum Tersentuh');
+
+        // Filter Hanya yang Belum Tersentuh
+        $responseBlank = $this->actingAs($user)->get(route('rekap.perbandingan', ['filter_status' => 'belum_tersentuh']));
+        $responseBlank->assertStatus(200);
+        $responseBlank->assertSee('Dusun Kandora (Belum)');
+        $responseBlank->assertDontSee('Dusun Batulelleng (Sudah)');
+    }
 }
