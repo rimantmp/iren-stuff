@@ -75,6 +75,7 @@ Route::middleware('auth')->group(function (): void {
 
         Route::get('/dusun', [MasterWilayahController::class, 'dusun'])->name('dusun');
         Route::post('/dusun', [MasterWilayahController::class, 'storeDusun'])->name('dusun.store');
+        Route::post('/dusun/batch', [MasterWilayahController::class, 'storeDusunBatch'])->name('dusun.store-batch');
         Route::put('/dusun/{id}', [MasterWilayahController::class, 'updateDusun'])->name('dusun.update');
         Route::delete('/dusun/{id}', [MasterWilayahController::class, 'destroyDusun'])->name('dusun.destroy');
     });

@@ -288,4 +288,96 @@ class MasterDusunTest extends TestCase
         $resRight->assertJsonCount(1, 'results');
         $resRight->assertJsonFragment(['id' => $kelKec2->id]);
     }
+
+    public function test_admin_can_store_multiple_dusun_in_batch(): void
+    {
+        $laangTanduk = Kelurahan::create([
+            'id' => '7326011003',
+            'nama' => 'Kelurahan Laang Tanduk',
+            'latitude' => -2.9712,
+            'longitude' => 119.8950,
+        ]);
+
+        $payload = [
+            'kelurahan_id' => $laangTanduk->id,
+            'items' => [
+                [
+                    'nama' => 'Dusun Laang Satu',
+                    'rt' => '01',
+                    'rw' => '01',
+                    'kepala_dusun' => 'Bpk. Simon',
+                    'keterangan' => 'Dekat kantor lurah',
+                ],
+                [
+                    'nama' => 'Dusun Laang Dua',
+                    'rt' => '02',
+                    'rw' => '01',
+                    'kepala_dusun' => 'Bpk. Markus',
+                    'keterangan' => 'Wilayah atas',
+                ],
+                [
+                    'nama' => 'Dusun Tanduk Baru',
+                    'rt' => '03',
+                    'rw' => '02',
+                    'kepala_dusun' => 'Ibu Maria',
+                    'keterangan' => '',
+                ],
+                [
+                    // Empty row should be ignored gracefully
+                    'nama' => '',
+                    'rt' => '',
+                    'rw' => '',
+                ],
+            ],
+        ];
+
+        $response = $this->actingAs($this->user)->post(route('master.dusun.store-batch'), $payload);
+
+        $response->assertRedirect();
+        $response->assertSessionHas('success');
+
+        $this->assertDatabaseHas('t_dusun', [
+            'kelurahan_id' => '7326011003',
+            'nama' => 'Dusun Laang Satu',
+            'kepala_dusun' => 'Bpk. Simon',
+        ]);
+        $this->assertDatabaseHas('t_dusun', [
+            'kelurahan_id' => '7326011003',
+            'nama' => 'Dusun Laang Dua',
+            'kepala_dusun' => 'Bpk. Markus',
+        ]);
+        $this->assertDatabaseHas('t_dusun', [
+            'kelurahan_id' => '7326011003',
+            'nama' => 'Dusun Tanduk Baru',
+            'kepala_dusun' => 'Ibu Maria',
+        ]);
+
+        // Total 3 inserted
+        $this->assertEquals(3, Dusun::where('kelurahan_id', '7326011003')->count());
+    }
+
+    public function test_store_dusun_batch_validation_fails_when_no_valid_items(): void
+    {
+        $response = $this->actingAs($this->user)->post(route('master.dusun.store-batch'), [
+            'kelurahan_id' => $this->kelurahan->id,
+            'items' => [
+                ['nama' => '  '],
+                ['nama' => ''],
+            ],
+        ]);
+
+        $response->assertSessionHasErrors(['items']);
+    }
+
+    public function test_store_dusun_batch_validation_fails_when_kelurahan_invalid(): void
+    {
+        $response = $this->actingAs($this->user)->post(route('master.dusun.store-batch'), [
+            'kelurahan_id' => '9999999999',
+            'items' => [
+                ['nama' => 'Dusun Uji'],
+            ],
+        ]);
+
+        $response->assertSessionHasErrors(['kelurahan_id']);
+    }
 }

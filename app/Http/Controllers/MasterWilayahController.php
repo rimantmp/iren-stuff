@@ -9,6 +9,7 @@ use App\Models\Kota;
 use App\Models\Provinsi;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class MasterWilayahController extends Controller
@@ -327,6 +328,62 @@ class MasterWilayahController extends Controller
         $dusun = Dusun::create($validated);
 
         return back()->with('success', "Dusun {$dusun->nama} berhasil ditambahkan!");
+    }
+
+    public function storeDusunBatch(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'kelurahan_id' => ['required', 'string', 'exists:t_kelurahan,id'],
+            'items' => ['required', 'array', 'min:1'],
+            'items.*.nama' => ['nullable', 'string', 'max:100'],
+            'items.*.rw' => ['nullable', 'string', 'max:20'],
+            'items.*.rt' => ['nullable', 'string', 'max:20'],
+            'items.*.kepala_dusun' => ['nullable', 'string', 'max:100'],
+            'items.*.latitude' => ['nullable', 'numeric'],
+            'items.*.longitude' => ['nullable', 'numeric'],
+            'items.*.keterangan' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $kelurahan = Kelurahan::findOrFail($validated['kelurahan_id']);
+
+        $records = [];
+        $now = now();
+
+        foreach ($validated['items'] as $item) {
+            $nama = trim($item['nama'] ?? '');
+            if ($nama === '') {
+                continue;
+            }
+
+            $records[] = [
+                'kelurahan_id' => $kelurahan->id,
+                'nama' => $nama,
+                'rw' => ! empty($item['rw']) ? trim($item['rw']) : null,
+                'rt' => ! empty($item['rt']) ? trim($item['rt']) : null,
+                'kepala_dusun' => ! empty($item['kepala_dusun']) ? trim($item['kepala_dusun']) : null,
+                'latitude' => (isset($item['latitude']) && $item['latitude'] !== '') ? (float) $item['latitude'] : $kelurahan->latitude,
+                'longitude' => (isset($item['longitude']) && $item['longitude'] !== '') ? (float) $item['longitude'] : $kelurahan->longitude,
+                'keterangan' => ! empty($item['keterangan']) ? trim($item['keterangan']) : null,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+        }
+
+        if (empty($records)) {
+            return back()->withErrors(['items' => 'Minimal satu nama dusun harus diisi.'])->withInput();
+        }
+
+        DB::transaction(function () use ($records): void {
+            Dusun::insert($records);
+        });
+
+        $count = count($records);
+
+        return redirect()->route('master.dusun', [
+            'kota_id' => substr($kelurahan->id, 0, 4),
+            'kecamatan_id' => substr($kelurahan->id, 0, 6),
+            'kelurahan_id' => $kelurahan->id,
+        ])->with('success', "Berhasil menambahkan {$count} dusun sekaligus pada Kelurahan {$kelurahan->nama}!");
     }
 
     public function updateDusun(Request $request, int|string $id): RedirectResponse
