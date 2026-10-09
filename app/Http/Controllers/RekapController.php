@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Dusun;
 use App\Models\JenisBantuan;
 use App\Models\Kecamatan;
 use App\Models\Kelurahan;
@@ -231,14 +232,14 @@ class RekapController extends Controller
                 '<b>Kabupaten / Kota</b>',
                 '<b>Kecamatan</b>',
                 '<b>Kelurahan / Lembang</b>',
-                '<b>Dusun / Lembang Sasaran</b>',
-                '<center><b>Target Rencana (Titik)</b></center>',
+                '<b>Dusun / Lembang</b>',
+                '<center><b>Target Titik</b></center>',
                 '<right><b>Target Volume (Liter)</b></right>',
-                '<center><b>Realisasi Tersalurkan (Titik)</b></center>',
-                '<right><b>Realisasi Tersalurkan (Volume Liter)</b></right>',
-                '<center><b>Sisa Belum Salur (Titik)</b></center>',
-                '<right><b>Sisa Belum Salur (Volume Liter)</b></right>',
-                '<center><b>Progres Capaian (%)</b></center>',
+                '<center><b>Realisasi Titik</b></center>',
+                '<right><b>Realisasi Volume (Liter)</b></right>',
+                '<center><b>Sisa Titik</b></center>',
+                '<right><b>Sisa Volume (Liter)</b></right>',
+                '<center><b>Capaian (%)</b></center>',
                 '<center><b>Status Pelaksanaan</b></center>',
             ],
         ];
@@ -249,7 +250,7 @@ class RekapController extends Controller
                 $row['kota'],
                 $row['kecamatan'],
                 $row['kelurahan'],
-                ! empty($row['dusun_names']) ? implode('; ', $row['dusun_names']) : '-',
+                $row['dusun'],
                 $row['target_titik'],
                 $row['target_volume'],
                 $row['realisasi_titik'],
@@ -267,13 +268,13 @@ class RekapController extends Controller
             '<b>'.$summary['total_kota'].' Kabupaten/Kota</b>',
             '<b>'.$summary['total_kecamatan'].' Kecamatan</b>',
             '<b>'.$summary['total_kelurahan'].' Kelurahan/Lembang</b>',
-            '<b>'.($summary['total_dusun_terbantu'] ?? 0).' Dusun</b>',
-            '<b>'.$summary['total_target_titik'].'</b>',
-            '<b>'.$summary['total_target_volume'].'</b>',
-            '<b>'.$summary['total_realisasi_titik'].'</b>',
-            '<b>'.$summary['total_realisasi_volume'].'</b>',
-            '<b>'.$summary['total_sisa_titik'].'</b>',
-            '<b>'.$summary['total_sisa_volume'].'</b>',
+            '<b>'.$summary['total_baris'].' Wilayah / Dusun</b>',
+            '<b>'.$summary['total_target_titik'].' Titik</b>',
+            '<b>'.number_format($summary['total_target_volume'], 0, ',', '.').' Liter</b>',
+            '<b>'.$summary['total_realisasi_titik'].' Titik</b>',
+            '<b>'.number_format($summary['total_realisasi_volume'], 0, ',', '.').' Liter</b>',
+            '<b>'.$summary['total_sisa_titik'].' Titik</b>',
+            '<b>'.number_format($summary['total_sisa_volume'], 0, ',', '.').' Liter</b>',
             '<b>'.$summary['total_persentase'].'%</b>',
             '<b>'.($summary['total_persentase'] >= 100 ? 'Selesai 100%' : 'Dalam Proses').'</b>',
         ];
@@ -290,8 +291,8 @@ class RekapController extends Controller
     }
 
     /**
-     * Helper to compute comparison dataset grouped by Kota, Kecamatan, and Kelurahan.
-     * Includes all administrative regions (both serviced and unserviced/blank spots).
+     * Helper to compute comparison dataset grouped by Kota, Kecamatan, Kelurahan, and Dusun.
+     * Includes all administrative regions and registered dusuns (both serviced and unserviced/blank spots).
      *
      * @return array{items: array<int, array<string, mixed>>, summary: array<string, mixed>, selected_kota_id: string}
      */
@@ -358,6 +359,13 @@ class RekapController extends Controller
         // Peta nama kota untuk lookup
         $kotaMap = Kota::where('id', 'like', '73%')->get()->keyBy('id');
 
+        // Ambil semua Master Dusun yang terdaftar di kelurahan-kelurahan terkait
+        $allMasterDusun = Dusun::whereIn('kelurahan_id', $allMasterKelurahan->pluck('id'))
+            ->orderBy('nama')
+            ->get()
+            ->groupBy('kelurahan_id');
+
+        $filterStatus = $request->query('filter_status');
         $items = [];
         $totalTargetTitik = 0;
         $totalTargetVolume = 0;
@@ -378,89 +386,240 @@ class RekapController extends Controller
             $thisKotaNama = $kotaMap->get($regencyId)?->nama ?? $defaultKotaNama;
             $thisKecNama = $kecamatansMap->get($kecId)?->nama ?? ('Kecamatan '.$kecId);
 
-            $records = $txByKelurahan->get($kId, collect());
+            $kelRecords = $txByKelurahan->get($kId, collect());
+            $dusunsInKel = $allMasterDusun->get($kId, collect());
 
-            $targetTitik = $records->count();
-            $targetVolume = (float) $records->sum('jumlah_bantuan');
+            if ($dusunsInKel->isNotEmpty()) {
+                // Tampilkan baris per Dusun yang terdaftar
+                foreach ($dusunsInKel as $ds) {
+                    $records = $kelRecords->where('dusun_id', $ds->id);
 
-            $tersalurkan = $records->where('status', 'TERSALURKAN');
-            $realisasiTitik = $tersalurkan->count();
-            $realisasiVolume = (float) $tersalurkan->sum('jumlah_bantuan');
+                    $targetTitik = $records->count();
+                    $targetVolume = (float) $records->sum('jumlah_bantuan');
 
-            $sisaTitik = max(0, $targetTitik - $realisasiTitik);
-            $sisaVolume = max(0.0, $targetVolume - $realisasiVolume);
+                    $tersalurkan = $records->where('status', 'TERSALURKAN');
+                    $realisasiTitik = $tersalurkan->count();
+                    $realisasiVolume = (float) $tersalurkan->sum('jumlah_bantuan');
 
-            $persentase = $targetVolume > 0 ? round(($realisasiVolume / $targetVolume) * 100, 1) : 0.0;
+                    $sisaTitik = max(0, $targetTitik - $realisasiTitik);
+                    $sisaVolume = max(0.0, $targetVolume - $realisasiVolume);
 
-            if ($targetTitik === 0) {
-                $statusBadge = 'Belum Tersentuh';
-                $statusColor = 'slate';
-                $countDesaBelum++;
-            } elseif ($persentase >= 100) {
-                $statusBadge = 'Selesai';
-                $statusColor = 'emerald';
-                $countDesaSelesai++;
-            } elseif ($realisasiTitik > 0) {
-                $statusBadge = 'Sebagian';
-                $statusColor = 'blue';
-                $countDesaSebagian++;
+                    $persentase = $targetVolume > 0 ? round(($realisasiVolume / $targetVolume) * 100, 1) : 0.0;
+
+                    if ($targetTitik === 0) {
+                        $statusBadge = 'Belum Tersentuh';
+                        $statusColor = 'slate';
+                        $countDesaBelum++;
+                    } elseif ($persentase >= 100) {
+                        $statusBadge = 'Selesai';
+                        $statusColor = 'emerald';
+                        $countDesaSelesai++;
+                    } elseif ($realisasiTitik > 0) {
+                        $statusBadge = 'Sebagian';
+                        $statusColor = 'blue';
+                        $countDesaSebagian++;
+                    } else {
+                        $statusBadge = 'Rencana';
+                        $statusColor = 'amber';
+                        $countDesaRencana++;
+                    }
+
+                    $satuan = $records->first()?->satuan ?: 'Liter';
+
+                    $item = [
+                        'kota_id' => $regencyId,
+                        'kota' => $thisKotaNama,
+                        'kecamatan_id' => $kecId,
+                        'kecamatan' => $thisKecNama,
+                        'kelurahan_id' => $kId,
+                        'kelurahan' => $kel->nama,
+                        'dusun_id' => $ds->id,
+                        'dusun' => $ds->nama,
+                        'is_dusun' => true,
+                        'target_titik' => $targetTitik,
+                        'target_volume' => $targetVolume,
+                        'realisasi_titik' => $realisasiTitik,
+                        'realisasi_volume' => $realisasiVolume,
+                        'sisa_titik' => $sisaTitik,
+                        'sisa_volume' => $sisaVolume,
+                        'persentase' => $persentase,
+                        'status_badge' => $statusBadge,
+                        'status_color' => $statusColor,
+                        'satuan' => $satuan,
+                    ];
+
+                    // Filter Ketercakupan Status
+                    if ($filterStatus === 'sudah' && $realisasiTitik === 0) {
+                        continue;
+                    }
+                    if ($filterStatus === 'belum' && $realisasiTitik > 0) {
+                        continue;
+                    }
+                    if ($filterStatus === 'belum_tersentuh' && $statusBadge !== 'Belum Tersentuh') {
+                        continue;
+                    }
+
+                    $items[] = $item;
+                    $totalTargetTitik += $targetTitik;
+                    $totalTargetVolume += $targetVolume;
+                    $totalRealisasiTitik += $realisasiTitik;
+                    $totalRealisasiVolume += $realisasiVolume;
+                    $totalSisaTitik += $sisaTitik;
+                    $totalSisaVolume += $sisaVolume;
+                }
+
+                // Cek apakah ada penyaluran di kelurahan ini yang belum teralokasi ke dusun manapun
+                $unassignedRecords = $kelRecords->whereNull('dusun_id');
+                if ($unassignedRecords->isNotEmpty()) {
+                    $targetTitik = $unassignedRecords->count();
+                    $targetVolume = (float) $unassignedRecords->sum('jumlah_bantuan');
+
+                    $tersalurkan = $unassignedRecords->where('status', 'TERSALURKAN');
+                    $realisasiTitik = $tersalurkan->count();
+                    $realisasiVolume = (float) $tersalurkan->sum('jumlah_bantuan');
+
+                    $sisaTitik = max(0, $targetTitik - $realisasiTitik);
+                    $sisaVolume = max(0.0, $targetVolume - $realisasiVolume);
+
+                    $persentase = $targetVolume > 0 ? round(($realisasiVolume / $targetVolume) * 100, 1) : 0.0;
+
+                    if ($targetTitik === 0) {
+                        $statusBadge = 'Belum Tersentuh';
+                        $statusColor = 'slate';
+                        $countDesaBelum++;
+                    } elseif ($persentase >= 100) {
+                        $statusBadge = 'Selesai';
+                        $statusColor = 'emerald';
+                        $countDesaSelesai++;
+                    } elseif ($realisasiTitik > 0) {
+                        $statusBadge = 'Sebagian';
+                        $statusColor = 'blue';
+                        $countDesaSebagian++;
+                    } else {
+                        $statusBadge = 'Rencana';
+                        $statusColor = 'amber';
+                        $countDesaRencana++;
+                    }
+
+                    $satuan = $unassignedRecords->first()?->satuan ?: 'Liter';
+
+                    $item = [
+                        'kota_id' => $regencyId,
+                        'kota' => $thisKotaNama,
+                        'kecamatan_id' => $kecId,
+                        'kecamatan' => $thisKecNama,
+                        'kelurahan_id' => $kId,
+                        'kelurahan' => $kel->nama,
+                        'dusun_id' => null,
+                        'dusun' => 'Pusat Kelurahan / Non-Dusun',
+                        'is_dusun' => false,
+                        'target_titik' => $targetTitik,
+                        'target_volume' => $targetVolume,
+                        'realisasi_titik' => $realisasiTitik,
+                        'realisasi_volume' => $realisasiVolume,
+                        'sisa_titik' => $sisaTitik,
+                        'sisa_volume' => $sisaVolume,
+                        'persentase' => $persentase,
+                        'status_badge' => $statusBadge,
+                        'status_color' => $statusColor,
+                        'satuan' => $satuan,
+                    ];
+
+                    if ($filterStatus === 'sudah' && $realisasiTitik === 0) {
+                        continue;
+                    }
+                    if ($filterStatus === 'belum' && $realisasiTitik > 0) {
+                        continue;
+                    }
+                    if ($filterStatus === 'belum_tersentuh' && $statusBadge !== 'Belum Tersentuh') {
+                        continue;
+                    }
+
+                    $items[] = $item;
+                    $totalTargetTitik += $targetTitik;
+                    $totalTargetVolume += $targetVolume;
+                    $totalRealisasiTitik += $realisasiTitik;
+                    $totalRealisasiVolume += $realisasiVolume;
+                    $totalSisaTitik += $sisaTitik;
+                    $totalSisaVolume += $sisaVolume;
+                }
             } else {
-                $statusBadge = 'Rencana';
-                $statusColor = 'amber';
-                $countDesaRencana++;
+                // Kelurahan belum memiliki data master dusun terdaftar
+                $targetTitik = $kelRecords->count();
+                $targetVolume = (float) $kelRecords->sum('jumlah_bantuan');
+
+                $tersalurkan = $kelRecords->where('status', 'TERSALURKAN');
+                $realisasiTitik = $tersalurkan->count();
+                $realisasiVolume = (float) $tersalurkan->sum('jumlah_bantuan');
+
+                $sisaTitik = max(0, $targetTitik - $realisasiTitik);
+                $sisaVolume = max(0.0, $targetVolume - $realisasiVolume);
+
+                $persentase = $targetVolume > 0 ? round(($realisasiVolume / $targetVolume) * 100, 1) : 0.0;
+
+                if ($targetTitik === 0) {
+                    $statusBadge = 'Belum Tersentuh';
+                    $statusColor = 'slate';
+                    $countDesaBelum++;
+                } elseif ($persentase >= 100) {
+                    $statusBadge = 'Selesai';
+                    $statusColor = 'emerald';
+                    $countDesaSelesai++;
+                } elseif ($realisasiTitik > 0) {
+                    $statusBadge = 'Sebagian';
+                    $statusColor = 'blue';
+                    $countDesaSebagian++;
+                } else {
+                    $statusBadge = 'Rencana';
+                    $statusColor = 'amber';
+                    $countDesaRencana++;
+                }
+
+                $satuan = $kelRecords->first()?->satuan ?: 'Liter';
+
+                $item = [
+                    'kota_id' => $regencyId,
+                    'kota' => $thisKotaNama,
+                    'kecamatan_id' => $kecId,
+                    'kecamatan' => $thisKecNama,
+                    'kelurahan_id' => $kId,
+                    'kelurahan' => $kel->nama,
+                    'dusun_id' => null,
+                    'dusun' => '-',
+                    'is_dusun' => false,
+                    'target_titik' => $targetTitik,
+                    'target_volume' => $targetVolume,
+                    'realisasi_titik' => $realisasiTitik,
+                    'realisasi_volume' => $realisasiVolume,
+                    'sisa_titik' => $sisaTitik,
+                    'sisa_volume' => $sisaVolume,
+                    'persentase' => $persentase,
+                    'status_badge' => $statusBadge,
+                    'status_color' => $statusColor,
+                    'satuan' => $satuan,
+                ];
+
+                if ($filterStatus === 'sudah' && $realisasiTitik === 0) {
+                    continue;
+                }
+                if ($filterStatus === 'belum' && $realisasiTitik > 0) {
+                    continue;
+                }
+                if ($filterStatus === 'belum_tersentuh' && $statusBadge !== 'Belum Tersentuh') {
+                    continue;
+                }
+
+                $items[] = $item;
+                $totalTargetTitik += $targetTitik;
+                $totalTargetVolume += $targetVolume;
+                $totalRealisasiTitik += $realisasiTitik;
+                $totalRealisasiVolume += $realisasiVolume;
+                $totalSisaTitik += $sisaTitik;
+                $totalSisaVolume += $sisaVolume;
             }
-
-            $satuan = $records->first()?->satuan ?: 'Liter';
-
-            $dusunNames = $records->filter(fn ($r) => ! empty($r->dusun_id) && $r->dusun)
-                ->map(fn ($r) => $r->dusun->nama)
-                ->unique()
-                ->values()
-                ->all();
-
-            $item = [
-                'kota_id' => $regencyId,
-                'kota' => $thisKotaNama,
-                'kecamatan_id' => $kecId,
-                'kecamatan' => $thisKecNama,
-                'kelurahan_id' => $kId,
-                'kelurahan' => $kel->nama,
-                'dusun_names' => $dusunNames,
-                'target_titik' => $targetTitik,
-                'target_volume' => $targetVolume,
-                'realisasi_titik' => $realisasiTitik,
-                'realisasi_volume' => $realisasiVolume,
-                'sisa_titik' => $sisaTitik,
-                'sisa_volume' => $sisaVolume,
-                'persentase' => $persentase,
-                'status_badge' => $statusBadge,
-                'status_color' => $statusColor,
-                'satuan' => $satuan,
-            ];
-
-            // Filter Ketercakupan Status
-            $filterStatus = $request->query('filter_status');
-            if ($filterStatus === 'sudah' && $realisasiTitik === 0) {
-                continue; // Hanya yang sudah tersalurkan (realisasi > 0)
-            }
-            if ($filterStatus === 'belum' && $realisasiTitik > 0) {
-                continue; // Hanya yang belum tersalurkan (realisasi == 0)
-            }
-            if ($filterStatus === 'belum_tersentuh' && $statusBadge !== 'Belum Tersentuh') {
-                continue; // Hanya yang blank spot / belum ada alokasi sama sekali
-            }
-
-            $items[] = $item;
-
-            $totalTargetTitik += $targetTitik;
-            $totalTargetVolume += $targetVolume;
-            $totalRealisasiTitik += $realisasiTitik;
-            $totalRealisasiVolume += $realisasiVolume;
-            $totalSisaTitik += $sisaTitik;
-            $totalSisaVolume += $sisaVolume;
         }
 
-        // Urutkan berdasarkan Nama Kabupaten/Kota, lalu Nama Kecamatan, lalu Nama Kelurahan
+        // Urutkan berdasarkan Nama Kabupaten/Kota, lalu Nama Kecamatan, lalu Nama Kelurahan, lalu Nama Dusun
         usort($items, function (array $a, array $b): int {
             $cmpKota = strcmp($a['kota'], $b['kota']);
             if ($cmpKota !== 0) {
@@ -472,15 +631,21 @@ class RekapController extends Controller
                 return $cmpKec;
             }
 
-            return strcmp($a['kelurahan'], $b['kelurahan']);
+            $cmpKel = strcmp($a['kelurahan'], $b['kelurahan']);
+            if ($cmpKel !== 0) {
+                return $cmpKel;
+            }
+
+            return strcmp($a['dusun'], $b['dusun']);
         });
 
         $totalPersentase = $totalTargetVolume > 0 ? round(($totalRealisasiVolume / $totalTargetVolume) * 100, 1) : 0.0;
 
         $uniqueKota = count(array_unique(array_column($items, 'kota')));
         $uniqueKecamatan = count(array_unique(array_column($items, 'kecamatan')));
-        $uniqueKelurahan = count($items);
-        $totalDusunTerbantu = $allTxRecords->filter(fn ($r) => ! empty($r->dusun_id))->pluck('dusun_id')->unique()->count();
+        $uniqueKelurahan = count(array_unique(array_column($items, 'kelurahan')));
+        $totalBaris = count($items);
+        $totalDusunTerbantu = count(array_filter($items, fn ($i) => $i['is_dusun'] && $i['realisasi_titik'] > 0));
 
         $totalDesaTersalur = $countDesaSelesai + $countDesaSebagian;
 
@@ -490,6 +655,7 @@ class RekapController extends Controller
                 'total_kota' => $uniqueKota,
                 'total_kecamatan' => $uniqueKecamatan,
                 'total_kelurahan' => $uniqueKelurahan,
+                'total_baris' => $totalBaris,
                 'total_dusun_terbantu' => $totalDusunTerbantu,
                 'total_target_titik' => $totalTargetTitik,
                 'total_target_volume' => $totalTargetVolume,

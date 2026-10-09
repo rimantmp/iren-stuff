@@ -30,12 +30,12 @@
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             </div>
             <div>
-                <span class="text-[11px] font-medium text-slate-500 uppercase tracking-wider block">Desa Tersalurkan</span>
+                <span class="text-[11px] font-medium text-slate-500 uppercase tracking-wider block">Dusun / Wilayah Tersalurkan</span>
                 <span class="text-lg font-black text-emerald-700 leading-tight">
-                    {{ $summary['desa_tersalur'] }} <span class="text-xs font-normal text-slate-500">/ {{ $summary['total_kelurahan'] }} Desa</span>
+                    {{ $summary['desa_tersalur'] }} <span class="text-xs font-normal text-slate-500">/ {{ $summary['total_baris'] }} Wilayah</span>
                 </span>
                 <span class="text-[10px] text-slate-400 block">
-                    {{ $summary['total_kelurahan'] > 0 ? round(($summary['desa_tersalur'] / $summary['total_kelurahan']) * 100, 1) : 0 }}% Tercover &bull; {{ $summary['total_dusun_terbantu'] ?? 0 }} Dusun
+                    {{ $summary['total_baris'] > 0 ? round(($summary['desa_tersalur'] / $summary['total_baris']) * 100, 1) : 0 }}% Ketercakupan &bull; {{ $summary['total_dusun_terbantu'] ?? 0 }} Dusun
                 </span>
             </div>
         </div>
@@ -46,9 +46,9 @@
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
             </div>
             <div>
-                <span class="text-[11px] font-medium text-slate-500 uppercase tracking-wider block">Desa Belum Salur</span>
+                <span class="text-[11px] font-medium text-slate-500 uppercase tracking-wider block">Dusun Belum Salur</span>
                 <span class="text-lg font-black text-amber-700 leading-tight">
-                    {{ $summary['desa_belum_tersalur'] }} <span class="text-xs font-normal text-slate-500">Desa</span>
+                    {{ $summary['desa_belum_tersalur'] }} <span class="text-xs font-normal text-slate-500">Wilayah</span>
                 </span>
                 <span class="text-[10px] text-slate-400 block">
                     {{ $summary['desa_blank'] }} Belum Tersentuh Alokasi
@@ -197,7 +197,7 @@
                     @endphp
                     <a href="{{ route('rekap.perbandingan', array_merge($currentQuery, ['filter_status' => '', 'page' => 1])) }}"
                        class="px-2.5 py-1 rounded text-[11px] font-semibold transition border {{ request('filter_status') == '' ? 'bg-slate-900 text-white border-slate-900 shadow-sm' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100' }}">
-                        Semua ({{ $summary['total_kelurahan'] }})
+                        Semua ({{ $summary['total_baris'] }})
                     </a>
                     <a href="{{ route('rekap.perbandingan', array_merge($currentQuery, ['filter_status' => 'sudah', 'page' => 1])) }}"
                        class="px-2.5 py-1 rounded text-[11px] font-semibold transition border {{ request('filter_status') == 'sudah' ? 'bg-emerald-700 text-white border-emerald-700 shadow-sm' : 'bg-white text-emerald-800 border-emerald-200 hover:bg-emerald-50' }}">
@@ -220,41 +220,44 @@
                 <thead class="bg-slate-50 text-slate-700 uppercase tracking-wider text-[10px] font-bold border-b border-slate-200">
                     <tr>
                         <th class="py-3 px-3 text-center w-10">No</th>
-                        <th class="py-3 px-4">Kabupaten / Kota</th>
-                        <th class="py-3 px-4">Kecamatan</th>
-                        <th class="py-3 px-4">Kelurahan / Lembang</th>
-                        <th class="py-3 px-4 text-center">Target Rencana</th>
-                        <th class="py-3 px-4 text-center">Realisasi Tersalur</th>
-                        <th class="py-3 px-4 text-center">Sisa Belum Salur</th>
-                        <th class="py-3 px-4 text-center w-32">Progres Capaian</th>
-                        <th class="py-3 px-4 text-center w-28">Status</th>
+                        <th class="py-3 px-3">Kabupaten / Kota</th>
+                        <th class="py-3 px-3">Kecamatan</th>
+                        <th class="py-3 px-3">Kelurahan / Lembang</th>
+                        <th class="py-3 px-4">Dusun / Lembang</th>
+                        <th class="py-3 px-3 text-center">Target Rencana</th>
+                        <th class="py-3 px-3 text-center">Realisasi Tersalur</th>
+                        <th class="py-3 px-3 text-center">Sisa Belum Salur</th>
+                        <th class="py-3 px-3 text-center w-28">Progres Capaian</th>
+                        <th class="py-3 px-3 text-center w-28">Status</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
                     @forelse($paginatedItems as $idx => $row)
                         <tr class="hover:bg-slate-50/80 transition {{ $row['status_badge'] === 'Belum Tersentuh' ? 'bg-slate-50/40 text-slate-500' : '' }}">
                             <td class="py-2.5 px-3 text-center text-slate-400 font-mono text-[11px]">{{ $paginatedItems->firstItem() + $idx }}</td>
-                            <td class="py-2.5 px-4 font-semibold text-slate-900">
+                            <td class="py-2.5 px-3 font-semibold text-slate-900">
                                 <span class="px-2 py-0.5 bg-blue-50 text-blue-800 rounded font-semibold text-[11px] border border-blue-200">
                                     {{ $row['kota'] }}
                                 </span>
                             </td>
-                            <td class="py-2.5 px-4 font-medium text-slate-800">
+                            <td class="py-2.5 px-3 font-medium text-slate-800">
                                 <span class="px-2 py-0.5 bg-slate-100 text-slate-800 rounded font-medium text-[11px] border border-slate-200">
                                     {{ $row['kecamatan'] }}
                                 </span>
                             </td>
-                            <td class="py-2.5 px-4 font-medium {{ $row['status_badge'] === 'Belum Tersentuh' ? 'text-slate-600' : 'text-slate-950 font-bold' }}">
-                                <div>{{ $row['kelurahan'] }}</div>
-                                @if(!empty($row['dusun_names']))
-                                    <div class="mt-1 flex flex-wrap gap-1">
-                                        @foreach($row['dusun_names'] as $dusunName)
-                                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-normal bg-slate-100 text-slate-700 border border-slate-200">
-                                                <svg class="w-2.5 h-2.5 mr-0.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>
-                                                {{ $dusunName }}
-                                            </span>
-                                        @endforeach
-                                    </div>
+                            <td class="py-2.5 px-3 font-medium text-slate-800">
+                                {{ $row['kelurahan'] }}
+                            </td>
+                            <td class="py-2.5 px-4">
+                                @if($row['is_dusun'])
+                                    <span class="inline-flex items-center text-slate-950 font-bold">
+                                        <svg class="w-3.5 h-3.5 mr-1 text-blue-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>
+                                        {{ $row['dusun'] }}
+                                    </span>
+                                @else
+                                    <span class="text-slate-400 text-[11px] italic font-normal">
+                                        {{ $row['dusun'] }}
+                                    </span>
                                 @endif
                             </td>
                             <td class="py-2.5 px-4 text-center">
