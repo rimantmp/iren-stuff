@@ -68,6 +68,11 @@ Route::middleware('auth')->group(function (): void {
 
         Route::get('/kelurahan', [MasterWilayahController::class, 'kelurahan'])->name('kelurahan');
         Route::put('/kelurahan/{id}', [MasterWilayahController::class, 'updateKelurahan'])->name('kelurahan.update');
+
+        Route::get('/dusun', [MasterWilayahController::class, 'dusun'])->name('dusun');
+        Route::post('/dusun', [MasterWilayahController::class, 'storeDusun'])->name('dusun.store');
+        Route::put('/dusun/{id}', [MasterWilayahController::class, 'updateDusun'])->name('dusun.update');
+        Route::delete('/dusun/{id}', [MasterWilayahController::class, 'destroyDusun'])->name('dusun.destroy');
     });
 
     // Rekapitulasi & Laporan
@@ -107,5 +112,7 @@ Route::middleware('auth')->group(function (): void {
         Route::get('/kota/{provinsiId}', [WilayahController::class, 'getKota'])->name('kota');
         Route::get('/kecamatan/{kotaId}', [WilayahController::class, 'getKecamatan'])->name('kecamatan');
         Route::get('/kelurahan/{kecamatanId}', [WilayahController::class, 'getKelurahan'])->name('kelurahan');
+        Route::get('/kelurahan-search', [WilayahController::class, 'searchKelurahan'])->name('kelurahan-search');
+        Route::get('/dusun/{kelurahanId}', [WilayahController::class, 'getDusun'])->name('dusun');
     });
 });
