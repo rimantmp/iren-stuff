@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Dusun;
 use App\Models\JenisBantuan;
 use App\Models\Kecamatan;
 use App\Models\Kelurahan;
@@ -96,7 +97,8 @@ class RekapPerbandinganTest extends TestCase
         $response = $this->actingAs($user)->get(route('rekap.perbandingan.excel'));
 
         $response->assertStatus(200);
-        $this->assertStringContainsString('text/csv', $response->headers->get('content-type') ?? '');
+        $this->assertStringContainsString('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', $response->headers->get('content-type') ?? '');
+        $this->assertStringContainsString('.xlsx', $response->headers->get('content-disposition') ?? '');
     }
 
     public function test_authenticated_user_can_filter_by_status_tersalurkan_dan_belum(): void
@@ -145,5 +147,60 @@ class RekapPerbandinganTest extends TestCase
     {
         $response = $this->get(route('rekap.perbandingan'));
         $response->assertRedirect(route('login'));
+    }
+
+    public function test_dusun_is_displayed_in_rekap_and_perbandingan_reports(): void
+    {
+        $user = User::factory()->create();
+        $air = JenisBantuan::where('slug', 'air')->first();
+
+        $dusun = Dusun::create([
+            'kelurahan_id' => '7326011002',
+            'nama' => 'Dusun Singki',
+        ]);
+
+        PenyaluranBantuan::create([
+            'kode_transaksi' => 'BA-202610-7777',
+            'jenis_bantuan_id' => $air->id,
+            'provinsi_id' => '73',
+            'kota_id' => '7326',
+            'kecamatan_id' => '732601',
+            'kelurahan_id' => '7326011002',
+            'dusun_id' => $dusun->id,
+            'nama_penerima' => 'Marten Palimbong',
+            'jumlah_bantuan' => 5000,
+            'satuan' => 'Liter',
+            'tanggal_rencana' => '2026-10-15',
+            'status' => 'TERSALURKAN',
+        ]);
+
+        // Rekap Index
+        $rekapIndex = $this->actingAs($user)->get(route('rekap.index'));
+        $rekapIndex->assertStatus(200);
+        $rekapIndex->assertSee('Dusun Singki');
+
+        // Rekap Cetak
+        $rekapCetak = $this->actingAs($user)->get(route('rekap.cetak'));
+        $rekapCetak->assertStatus(200);
+        $rekapCetak->assertSee('Dusun Singki');
+
+        // Perbandingan Index
+        $perbandinganIndex = $this->actingAs($user)->get(route('rekap.perbandingan'));
+        $perbandinganIndex->assertStatus(200);
+        $perbandinganIndex->assertSee('Dusun Singki');
+
+        // Perbandingan Cetak
+        $perbandinganCetak = $this->actingAs($user)->get(route('rekap.perbandingan.cetak'));
+        $perbandinganCetak->assertStatus(200);
+        $perbandinganCetak->assertSee('Dusun Singki');
+
+        // Perbandingan XLSX Export
+        $excelResponse = $this->actingAs($user)->get(route('rekap.perbandingan.excel'));
+        $excelResponse->assertStatus(200);
+        $this->assertStringContainsString('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', $excelResponse->headers->get('content-type') ?? '');
+        $this->assertStringContainsString('.xlsx', $excelResponse->headers->get('content-disposition') ?? '');
+        $content = $excelResponse->streamedContent();
+        // File XLSX diawali dengan zip magic byte PK (0x50 0x4B)
+        $this->assertStringStartsWith('PK', $content);
     }
 }

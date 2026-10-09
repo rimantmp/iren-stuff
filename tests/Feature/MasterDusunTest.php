@@ -1,0 +1,160 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\Dusun;
+use App\Models\Kelurahan;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+class MasterDusunTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private User $user;
+
+    private Kelurahan $kelurahan;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->user = User::factory()->create();
+
+        // Create dummy kelurahan
+        $this->kelurahan = new Kelurahan;
+        $this->kelurahan->id = '7326011001';
+        $this->kelurahan->nama = 'Singki';
+        $this->kelurahan->latitude = -2.97566;
+        $this->kelurahan->longitude = 119.89841;
+        $this->kelurahan->save();
+    }
+
+    public function test_unauthenticated_user_cannot_access_dusun_page(): void
+    {
+        $response = $this->get(route('master.dusun'));
+        $response->assertRedirect(route('login'));
+    }
+
+    public function test_admin_can_view_dusun_page(): void
+    {
+        Dusun::create([
+            'kelurahan_id' => $this->kelurahan->id,
+            'nama' => 'Dusun Karassik',
+            'rt' => '01',
+            'rw' => '02',
+            'kepala_dusun' => 'Bapak Yohanes',
+            'latitude' => -2.9760,
+            'longitude' => 119.8990,
+        ]);
+
+        $response = $this->actingAs($this->user)->get(route('master.dusun'));
+
+        $response->assertStatus(200);
+        $response->assertSee('Master Data Dusun');
+        $response->assertSee('Dusun Karassik');
+        $response->assertSee('Singki');
+    }
+
+    public function test_admin_can_store_new_dusun(): void
+    {
+        $payload = [
+            'kelurahan_id' => $this->kelurahan->id,
+            'nama' => 'Dusun Sukomulyo',
+            'rt' => 'RT 03',
+            'rw' => 'RW 01',
+            'kepala_dusun' => 'Marthen L.',
+            'latitude' => -2.9800,
+            'longitude' => 119.9000,
+            'keterangan' => 'Akses jalan cor beton',
+        ];
+
+        $response = $this->actingAs($this->user)->post(route('master.dusun.store'), $payload);
+
+        $response->assertRedirect();
+        $response->assertSessionHas('success');
+
+        $this->assertDatabaseHas('t_dusun', [
+            'nama' => 'Dusun Sukomulyo',
+            'kelurahan_id' => '7326011001',
+            'kepala_dusun' => 'Marthen L.',
+        ]);
+    }
+
+    public function test_store_dusun_validation_requires_nama_and_kelurahan(): void
+    {
+        $response = $this->actingAs($this->user)->post(route('master.dusun.store'), [
+            'nama' => '',
+            'kelurahan_id' => '',
+        ]);
+
+        $response->assertSessionHasErrors(['nama', 'kelurahan_id']);
+    }
+
+    public function test_admin_can_update_dusun(): void
+    {
+        $dusun = Dusun::create([
+            'kelurahan_id' => $this->kelurahan->id,
+            'nama' => 'Dusun Awal',
+            'rt' => 'RT 01',
+            'rw' => 'RW 01',
+        ]);
+
+        $payload = [
+            'kelurahan_id' => $this->kelurahan->id,
+            'nama' => 'Dusun Terupdate',
+            'rt' => 'RT 02',
+            'rw' => 'RW 02',
+            'kepala_dusun' => 'Markus',
+        ];
+
+        $response = $this->actingAs($this->user)->put(route('master.dusun.update', $dusun->id), $payload);
+
+        $response->assertRedirect();
+        $response->assertSessionHas('success');
+
+        $this->assertDatabaseHas('t_dusun', [
+            'id' => $dusun->id,
+            'nama' => 'Dusun Terupdate',
+            'rt' => 'RT 02',
+            'rw' => 'RW 02',
+            'kepala_dusun' => 'Markus',
+        ]);
+    }
+
+    public function test_admin_can_destroy_dusun(): void
+    {
+        $dusun = Dusun::create([
+            'kelurahan_id' => $this->kelurahan->id,
+            'nama' => 'Dusun Dihapus',
+        ]);
+
+        $response = $this->actingAs($this->user)->delete(route('master.dusun.destroy', $dusun->id));
+
+        $response->assertRedirect();
+        $response->assertSessionHas('success');
+
+        $this->assertDatabaseMissing('t_dusun', [
+            'id' => $dusun->id,
+        ]);
+    }
+
+    public function test_ajax_search_kelurahan_and_get_dusun(): void
+    {
+        $dusun = Dusun::create([
+            'kelurahan_id' => $this->kelurahan->id,
+            'nama' => 'Dusun Ba\'tan',
+        ]);
+
+        // Search kelurahan
+        $searchRes = $this->actingAs($this->user)->getJson(route('wilayah.kelurahan-search', ['q' => 'Singki']));
+        $searchRes->assertStatus(200);
+        $searchRes->assertJsonFragment(['id' => $this->kelurahan->id]);
+
+        // Get dusun by kelurahan ID
+        $dusunRes = $this->actingAs($this->user)->getJson(route('wilayah.dusun', $this->kelurahan->id));
+        $dusunRes->assertStatus(200);
+        $dusunRes->assertJsonFragment(['text' => 'Dusun Ba\'tan']);
+    }
+}

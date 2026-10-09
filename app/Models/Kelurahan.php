@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Kelurahan extends Model
 {
@@ -22,4 +23,12 @@ class Kelurahan extends Model
         'latitude',
         'longitude',
     ];
+
+    /**
+     * @return HasMany<Dusun, $this>
+     */
+    public function dusuns(): HasMany
+    {
+        return $this->hasMany(Dusun::class, 'kelurahan_id', 'id');
+    }
 }

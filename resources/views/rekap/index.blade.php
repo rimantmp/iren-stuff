@@ -123,7 +123,7 @@
                             <td class="py-3 px-4">
                                 <span class="font-medium text-slate-900 block">{{ $item->nama_penerima }}</span>
                                 <span class="text-[11px] text-slate-500 block">
-                                    Kel. {{ $item->kelurahan?->nama }}, Kec. {{ $item->kecamatan?->nama }}, {{ $item->kota?->nama }}
+                                    {{ $item->dusun ? 'Dusun '.$item->dusun->nama.', ' : '' }}Kel. {{ $item->kelurahan?->nama }}, Kec. {{ $item->kecamatan?->nama }}, {{ $item->kota?->nama }}
                                 </span>
                             </td>
                             <td class="py-3 px-4 text-slate-700">

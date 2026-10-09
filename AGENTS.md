@@ -93,9 +93,11 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 
 === deployments rules ===
 
-# Deployment
+# Deployment & Git Branching
 
-- Laravel can be deployed using [Laravel Cloud](https://cloud.laravel.com/), which is the fastest way to deploy and scale production Laravel applications.
+- Automated deployment via GitHub Actions (`.github/workflows/deploy.yml`) is active on push to the `main` branch to cPanel.
+- NEVER push incomplete, experimental, or unverified changes directly to `main`.
+- Always follow the `git-branching-workflow` skill (`.agents/skills/git-branching-workflow/SKILL.md`): develop on `dev` or `feature/*` branches and only merge/push to `main` when code is tested, formatted, and ready for production deployment.
 - Activate the `deploying-to-cloud` skill whenever deploying to Laravel Cloud, configuring Cloud environments or resources, using the Cloud CLI, or troubleshooting Cloud deployments.
 
 === laravel/core rules ===

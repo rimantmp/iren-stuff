@@ -143,7 +143,12 @@
                             {{ $row['kecamatan'] }}
                         </td>
                         <td class="border border-slate-300 p-2 text-slate-800">
-                            {{ $row['kelurahan'] }}
+                            <span class="font-bold block text-slate-900">{{ $row['kelurahan'] }}</span>
+                            @if(!empty($row['dusun_names']))
+                                <span class="text-[9px] text-slate-600 block mt-0.5">
+                                    Dusun: {{ implode(', ', $row['dusun_names']) }}
+                                </span>
+                            @endif
                         </td>
                         <td class="border border-slate-300 p-2 text-center">
                             {{ $row['target_titik'] }} Titik

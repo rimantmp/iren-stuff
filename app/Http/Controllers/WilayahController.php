@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Dusun;
 use App\Models\Kecamatan;
 use App\Models\Kelurahan;
 use App\Models\Kota;
@@ -111,6 +112,61 @@ class WilayahController extends Controller
         $items = $query->orderBy('nama', 'asc')->get();
 
         $results = $items->map(function (Kelurahan $item): array {
+            return [
+                'id' => $item->id,
+                'text' => $item->nama,
+                'latitude' => $item->latitude,
+                'longitude' => $item->longitude,
+            ];
+        });
+
+        return response()->json(['results' => $results]);
+    }
+
+    /**
+     * Search Kelurahan directly by name/code for global lookup.
+     */
+    public function searchKelurahan(Request $request): JsonResponse
+    {
+        $search = $request->query('q');
+
+        if (! $search) {
+            return response()->json(['results' => []]);
+        }
+
+        $items = Kelurahan::where('nama', 'like', '%'.$search.'%')
+            ->orWhere('id', 'like', '%'.$search.'%')
+            ->limit(30)
+            ->get();
+
+        $results = $items->map(function (Kelurahan $item): array {
+            return [
+                'id' => $item->id,
+                'text' => "{$item->nama} (Kode: {$item->id})",
+                'latitude' => $item->latitude,
+                'longitude' => $item->longitude,
+            ];
+        });
+
+        return response()->json(['results' => $results]);
+    }
+
+    /**
+     * Get Dusun list by Kelurahan ID for Select2.
+     */
+    public function getDusun(Request $request, string $kelurahanId): JsonResponse
+    {
+        $search = $request->query('q');
+
+        $query = Dusun::where('kelurahan_id', $kelurahanId);
+
+        if ($search) {
+            $query->where('nama', 'like', '%'.$search.'%');
+        }
+
+        $items = $query->orderBy('nama', 'asc')->get();
+
+        $results = $items->map(function (Dusun $item): array {
             return [
                 'id' => $item->id,
                 'text' => $item->nama,

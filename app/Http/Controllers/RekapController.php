@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Pagination\Paginator;
 use Illuminate\View\View;
+use Shuchkin\SimpleXLSXGen;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class RekapController extends Controller
@@ -22,7 +23,7 @@ class RekapController extends Controller
      */
     public function index(Request $request): View
     {
-        $query = PenyaluranBantuan::with(['jenisBantuan', 'provinsi', 'kota', 'kecamatan', 'kelurahan']);
+        $query = PenyaluranBantuan::with(['jenisBantuan', 'provinsi', 'kota', 'kecamatan', 'kelurahan', 'dusun']);
 
         // Filters
         if ($request->filled('jenis_bantuan_id')) {
@@ -80,7 +81,7 @@ class RekapController extends Controller
      */
     public function cetak(Request $request): View
     {
-        $query = PenyaluranBantuan::with(['jenisBantuan', 'provinsi', 'kota', 'kecamatan', 'kelurahan']);
+        $query = PenyaluranBantuan::with(['jenisBantuan', 'provinsi', 'kota', 'kecamatan', 'kelurahan', 'dusun']);
 
         if ($request->filled('jenis_bantuan_id')) {
             $query->where('jenis_bantuan_id', $request->query('jenis_bantuan_id'));
@@ -210,7 +211,7 @@ class RekapController extends Controller
     }
 
     /**
-     * Export comparison data as Excel-compatible CSV.
+     * Export comparison data as genuine Microsoft Excel (.xlsx) workbook.
      */
     public function exportPerbandinganExcel(Request $request): StreamedResponse
     {
@@ -218,83 +219,74 @@ class RekapController extends Controller
         $items = $data['items'];
         $summary = $data['summary'];
 
-        $filename = 'Laporan-Perbandingan-Penyaluran-'.date('Ymd-His').'.csv';
+        $filename = 'Laporan-Perbandingan-Penyaluran-'.date('Ymd-His').'.xlsx';
 
-        $headers = [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
-            'Pragma' => 'no-cache',
-            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
-            'Expires' => '0',
+        $rows = [
+            ['<style font-size="14"><b>LAPORAN PERBANDINGAN TARGET DAN REALISASI PENYALURAN BANTUAN SOSIAL</b></style>'],
+            ['<b>Sistem Penyaluran Bantuan Sosial - Aspirasi Sulawesi Selatan III</b>'],
+            ['Tanggal Unduh: '.date('d/m/Y H:i').' WITA'],
+            [],
+            [
+                '<b>No</b>',
+                '<b>Kabupaten / Kota</b>',
+                '<b>Kecamatan</b>',
+                '<b>Kelurahan / Lembang</b>',
+                '<b>Dusun / Lembang Sasaran</b>',
+                '<center><b>Target Rencana (Titik)</b></center>',
+                '<right><b>Target Volume (Liter)</b></right>',
+                '<center><b>Realisasi Tersalurkan (Titik)</b></center>',
+                '<right><b>Realisasi Tersalurkan (Volume Liter)</b></right>',
+                '<center><b>Sisa Belum Salur (Titik)</b></center>',
+                '<right><b>Sisa Belum Salur (Volume Liter)</b></right>',
+                '<center><b>Progres Capaian (%)</b></center>',
+                '<center><b>Status Pelaksanaan</b></center>',
+            ],
         ];
 
-        return response()->stream(function () use ($items, $summary): void {
-            $output = fopen('php://output', 'w');
-            if ($output === false) {
-                return;
-            }
+        foreach ($items as $idx => $row) {
+            $rows[] = [
+                $idx + 1,
+                $row['kota'],
+                $row['kecamatan'],
+                $row['kelurahan'],
+                ! empty($row['dusun_names']) ? implode('; ', $row['dusun_names']) : '-',
+                $row['target_titik'],
+                $row['target_volume'],
+                $row['realisasi_titik'],
+                $row['realisasi_volume'],
+                $row['sisa_titik'],
+                $row['sisa_volume'],
+                $row['persentase'].'%',
+                $row['status_badge'],
+            ];
+        }
 
-            // UTF-8 BOM untuk kompatibilitas penuh Microsoft Excel
-            fwrite($output, "\xEF\xBB\xBF");
+        $rows[] = [];
+        $rows[] = [
+            '<b>TOTAL</b>',
+            '<b>'.$summary['total_kota'].' Kabupaten/Kota</b>',
+            '<b>'.$summary['total_kecamatan'].' Kecamatan</b>',
+            '<b>'.$summary['total_kelurahan'].' Kelurahan/Lembang</b>',
+            '<b>'.($summary['total_dusun_terbantu'] ?? 0).' Dusun</b>',
+            '<b>'.$summary['total_target_titik'].'</b>',
+            '<b>'.$summary['total_target_volume'].'</b>',
+            '<b>'.$summary['total_realisasi_titik'].'</b>',
+            '<b>'.$summary['total_realisasi_volume'].'</b>',
+            '<b>'.$summary['total_sisa_titik'].'</b>',
+            '<b>'.$summary['total_sisa_volume'].'</b>',
+            '<b>'.$summary['total_persentase'].'%</b>',
+            '<b>'.($summary['total_persentase'] >= 100 ? 'Selesai 100%' : 'Dalam Proses').'</b>',
+        ];
 
-            // Header Laporan
-            fputcsv($output, ['LAPORAN PERBANDINGAN PENYALURAN BANTUAN SOSIAL (TARGET RENCANA VS REALISASI)']);
-            fputcsv($output, ['SISTEM PENYALURAN BANTUAN SOSIAL - ASPIRASI SULAWESI SELATAN III']);
-            fputcsv($output, ['Tanggal Ekspor', date('d/m/Y H:i').' WIB']);
-            fputcsv($output, []);
+        $xlsx = SimpleXLSXGen::fromArray($rows, 'Komparasi Wilayah');
 
-            // Baris Judul Kolom
-            fputcsv($output, [
-                'No',
-                'Kabupaten / Kota',
-                'Kecamatan',
-                'Kelurahan / Lembang',
-                'Target Rencana (Titik)',
-                'Target Rencana (Volume Liter)',
-                'Realisasi Tersalurkan (Titik)',
-                'Realisasi Tersalurkan (Volume Liter)',
-                'Sisa Belum Salur (Titik)',
-                'Sisa Belum Salur (Volume Liter)',
-                'Progres Capaian (%)',
-                'Status Pelaksanaan',
-            ]);
-
-            foreach ($items as $idx => $row) {
-                fputcsv($output, [
-                    $idx + 1,
-                    $row['kota'],
-                    $row['kecamatan'],
-                    $row['kelurahan'],
-                    $row['target_titik'],
-                    $row['target_volume'],
-                    $row['realisasi_titik'],
-                    $row['realisasi_volume'],
-                    $row['sisa_titik'],
-                    $row['sisa_volume'],
-                    $row['persentase'].'%',
-                    $row['status_badge'],
-                ]);
-            }
-
-            // Baris Total Akumulatif
-            fputcsv($output, []);
-            fputcsv($output, [
-                'TOTAL',
-                $summary['total_kota'].' Kabupaten/Kota',
-                $summary['total_kecamatan'].' Kecamatan',
-                $summary['total_kelurahan'].' Kelurahan/Lembang',
-                $summary['total_target_titik'],
-                $summary['total_target_volume'],
-                $summary['total_realisasi_titik'],
-                $summary['total_realisasi_volume'],
-                $summary['total_sisa_titik'],
-                $summary['total_sisa_volume'],
-                $summary['total_persentase'].'%',
-                $summary['total_persentase'] >= 100 ? 'Selesai 100%' : 'Dalam Proses',
-            ]);
-
-            fclose($output);
-        }, 200, $headers);
+        return response()->streamDownload(function () use ($xlsx): void {
+            echo (string) $xlsx;
+        }, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
+            'Pragma' => 'public',
+        ]);
     }
 
     /**
@@ -311,7 +303,7 @@ class RekapController extends Controller
         $defaultKotaNama = $kotaObj?->nama ?? 'Kabupaten Toraja Utara';
 
         // Ambil data transaksi yang ada di database
-        $queryTx = PenyaluranBantuan::with(['jenisBantuan', 'provinsi', 'kota', 'kecamatan', 'kelurahan']);
+        $queryTx = PenyaluranBantuan::with(['jenisBantuan', 'provinsi', 'kota', 'kecamatan', 'kelurahan', 'dusun']);
 
         if ($request->filled('jenis_bantuan_id')) {
             $queryTx->where('jenis_bantuan_id', $request->query('jenis_bantuan_id'));
@@ -420,6 +412,12 @@ class RekapController extends Controller
 
             $satuan = $records->first()?->satuan ?: 'Liter';
 
+            $dusunNames = $records->filter(fn ($r) => ! empty($r->dusun_id) && $r->dusun)
+                ->map(fn ($r) => $r->dusun->nama)
+                ->unique()
+                ->values()
+                ->all();
+
             $item = [
                 'kota_id' => $regencyId,
                 'kota' => $thisKotaNama,
@@ -427,6 +425,7 @@ class RekapController extends Controller
                 'kecamatan' => $thisKecNama,
                 'kelurahan_id' => $kId,
                 'kelurahan' => $kel->nama,
+                'dusun_names' => $dusunNames,
                 'target_titik' => $targetTitik,
                 'target_volume' => $targetVolume,
                 'realisasi_titik' => $realisasiTitik,
@@ -481,6 +480,7 @@ class RekapController extends Controller
         $uniqueKota = count(array_unique(array_column($items, 'kota')));
         $uniqueKecamatan = count(array_unique(array_column($items, 'kecamatan')));
         $uniqueKelurahan = count($items);
+        $totalDusunTerbantu = $allTxRecords->filter(fn ($r) => ! empty($r->dusun_id))->pluck('dusun_id')->unique()->count();
 
         $totalDesaTersalur = $countDesaSelesai + $countDesaSebagian;
 
@@ -490,6 +490,7 @@ class RekapController extends Controller
                 'total_kota' => $uniqueKota,
                 'total_kecamatan' => $uniqueKecamatan,
                 'total_kelurahan' => $uniqueKelurahan,
+                'total_dusun_terbantu' => $totalDusunTerbantu,
                 'total_target_titik' => $totalTargetTitik,
                 'total_target_volume' => $totalTargetVolume,
                 'total_realisasi_titik' => $totalRealisasiTitik,

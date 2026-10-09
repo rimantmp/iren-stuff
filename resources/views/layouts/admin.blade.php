@@ -198,6 +198,11 @@
                             <span class="w-1.5 h-1.5 rounded-full {{ request()->routeIs('master.kelurahan') ? 'bg-blue-400' : 'bg-slate-600' }}"></span>
                             <span>Kelurahan dan Desa</span>
                         </a>
+                        <a href="{{ route('master.dusun') }}"
+                           class="flex items-center space-x-2.5 px-3 py-1.5 rounded-md font-medium transition {{ request()->routeIs('master.dusun*') ? 'bg-slate-800 text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200' }}">
+                            <span class="w-1.5 h-1.5 rounded-full {{ request()->routeIs('master.dusun*') ? 'bg-blue-400' : 'bg-slate-600' }}"></span>
+                            <span>Dusun</span>
+                        </a>
                     </div>
                 </div>
 

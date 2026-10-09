@@ -16,6 +16,7 @@ class PenyaluranBantuan extends Model
         'kota_id',
         'kecamatan_id',
         'kelurahan_id',
+        'dusun_id',
         'alamat_detail',
         'latitude',
         'longitude',
@@ -87,5 +88,13 @@ class PenyaluranBantuan extends Model
     public function kelurahan(): BelongsTo
     {
         return $this->belongsTo(Kelurahan::class, 'kelurahan_id', 'id');
+    }
+
+    /**
+     * @return BelongsTo<Dusun, $this>
+     */
+    public function dusun(): BelongsTo
+    {
+        return $this->belongsTo(Dusun::class, 'dusun_id', 'id');
     }
 }

@@ -93,6 +93,16 @@
                             </select>
                             <span class="text-[10px] text-slate-500 mt-1 block">Aktif setelah memilih kecamatan</span>
                         </div>
+
+                        <div class="sm:col-span-2">
+                            <label class="block font-medium text-slate-800 mb-1" for="dusun_id">
+                                Dusun / Lembang / Lingkungan <span class="text-[10px] text-slate-400 font-normal">(Opsional)</span>
+                            </label>
+                            <select id="dusun_id" name="dusun_id" class="w-full" disabled>
+                                <option value="">Pilih Dusun (Opsional)...</option>
+                            </select>
+                            <span class="text-[10px] text-slate-500 mt-1 block">Otomatis aktif setelah memilih kelurahan</span>
+                        </div>
                     </div>
 
                     <div>
@@ -618,6 +628,7 @@
         const urlKota      = "{{ url('wilayah/kota') }}";
         const urlKecamatan = "{{ url('wilayah/kecamatan') }}";
         const urlKelurahan = "{{ url('wilayah/kelurahan') }}";
+        const urlDusun     = "{{ url('wilayah/dusun') }}";
 
         const defaultProvId = "{{ $defaultProvinsi?->id ?? '73' }}";
         const defaultKotaId = "{{ $defaultKota?->id ?? '7326' }}";
@@ -664,6 +675,7 @@
             resetSelect('#kota_id', 'Pilih Kota/Kabupaten...');
             resetSelect('#kecamatan_id', 'Pilih Kecamatan...');
             resetSelect('#kelurahan_id', 'Pilih Kelurahan/Desa...');
+            resetSelect('#dusun_id', 'Pilih Dusun (Opsional)...');
 
             $('#kota_id').prop('disabled', false).select2({
                 placeholder: 'Pilih Kota/Kabupaten...',
@@ -682,6 +694,7 @@
             updateSummaryWilayah();
             resetSelect('#kecamatan_id', 'Pilih Kecamatan...');
             resetSelect('#kelurahan_id', 'Pilih Kelurahan/Desa...');
+            resetSelect('#dusun_id', 'Pilih Dusun (Opsional)...');
 
             $('#kecamatan_id').prop('disabled', false).select2({
                 placeholder: 'Pilih Kecamatan...',
@@ -699,6 +712,7 @@
             const id = e.params.data.id;
             updateSummaryWilayah();
             resetSelect('#kelurahan_id', 'Pilih Kelurahan/Desa...');
+            resetSelect('#dusun_id', 'Pilih Dusun (Opsional)...');
 
             $('#kelurahan_id').prop('disabled', false).select2({
                 placeholder: 'Pilih Kelurahan/Desa...',
@@ -724,6 +738,36 @@
             } else {
                 $('#coordStatus').text('Kel. ' + data.text + ' (Silakan tentukan titik di peta)');
             }
+
+            // Enable and init Dusun select2
+            resetSelect('#dusun_id', 'Pilih Dusun (Opsional)...');
+            $('#dusun_id').prop('disabled', false).select2({
+                placeholder: 'Pilih Dusun (Opsional)...',
+                allowClear: true,
+                ajax: {
+                    url: `${urlDusun}/${data.id}`,
+                    dataType: 'json',
+                    delay: 250,
+                    data: params => ({ q: params.term }),
+                    processResults: res => ({ results: res.results })
+                }
+            });
+        });
+
+        $('#dusun_id').on('select2:select', function(e) {
+            const data = e.params.data;
+            updateSummaryWilayah();
+
+            if (data.latitude && data.longitude && (parseFloat(data.latitude) !== 0 || parseFloat(data.longitude) !== 0)) {
+                const lat = parseFloat(data.latitude);
+                const lng = parseFloat(data.longitude);
+                setCoordinates(lat, lng, 'Koordinat Dusun ' + data.text);
+                map.setView([lat, lng], 15);
+            }
+        });
+
+        $('#dusun_id').on('select2:clear', function() {
+            updateSummaryWilayah();
         });
 
         function resetSelect(selector, placeholderText) {
@@ -783,8 +827,10 @@
         const kota = $('#kota_id option:selected').text();
         const kec = $('#kecamatan_id option:selected').text();
         const kel = $('#kelurahan_id option:selected').text();
+        const dusun = $('#dusun_id option:selected').text();
 
         const parts = [];
+        if (dusun && !dusun.includes('Pilih')) parts.push('Dusun ' + dusun);
         if (kel && !kel.includes('Pilih')) parts.push('Kel. ' + kel);
         if (kec && !kec.includes('Pilih')) parts.push('Kec. ' + kec);
         if (kota && !kota.includes('Pilih')) parts.push(kota);

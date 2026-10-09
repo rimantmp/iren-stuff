@@ -344,6 +344,12 @@
                         <span class="text-slate-500">Kelurahan/Desa:</span>
                         <span class="font-bold text-blue-900">{{ $penyaluran->kelurahan?->nama }}</span>
                     </div>
+                    @if($penyaluran->dusun)
+                        <div class="flex items-center justify-between">
+                            <span class="text-slate-500">Dusun / Lembang:</span>
+                            <span class="font-bold text-slate-900">{{ $penyaluran->dusun->nama }}</span>
+                        </div>
+                    @endif
                 </div>
 
                 <!-- Leaflet Container -->
