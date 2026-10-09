@@ -35,7 +35,7 @@
                     {{ $summary['desa_tersalur'] }} <span class="text-xs font-normal text-slate-500">/ {{ $summary['total_kelurahan'] }} Desa</span>
                 </span>
                 <span class="text-[10px] text-slate-400 block">
-                    {{ $summary['total_kelurahan'] > 0 ? round(($summary['desa_tersalur'] / $summary['total_kelurahan']) * 100, 1) : 0 }}% Ketercakupan Wilayah
+                    {{ $summary['total_kelurahan'] > 0 ? round(($summary['desa_tersalur'] / $summary['total_kelurahan']) * 100, 1) : 0 }}% Tercover &bull; {{ $summary['total_dusun_terbantu'] ?? 0 }} Dusun
                 </span>
             </div>
         </div>
@@ -245,7 +245,17 @@
                                 </span>
                             </td>
                             <td class="py-2.5 px-4 font-medium {{ $row['status_badge'] === 'Belum Tersentuh' ? 'text-slate-600' : 'text-slate-950 font-bold' }}">
-                                {{ $row['kelurahan'] }}
+                                <div>{{ $row['kelurahan'] }}</div>
+                                @if(!empty($row['dusun_names']))
+                                    <div class="mt-1 flex flex-wrap gap-1">
+                                        @foreach($row['dusun_names'] as $dusunName)
+                                            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-normal bg-slate-100 text-slate-700 border border-slate-200">
+                                                <svg class="w-2.5 h-2.5 mr-0.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/></svg>
+                                                {{ $dusunName }}
+                                            </span>
+                                        @endforeach
+                                    </div>
+                                @endif
                             </td>
                             <td class="py-2.5 px-4 text-center">
                                 @if($row['target_volume'] > 0)

@@ -121,9 +121,16 @@
                 </div>
 
                 <div>
-                    <label class="block font-medium text-slate-700 mb-1" for="dusun_id">
-                        Dusun / Lembang <span class="text-[10px] text-slate-400 font-normal">(Opsional)</span>
-                    </label>
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="block font-medium text-slate-700" for="dusun_id">
+                            Dusun / Lembang <span class="text-[10px] text-slate-400 font-normal">(Opsional)</span>
+                        </label>
+                        <a href="{{ route('master.dusun', ['kelurahan_id' => $penyaluran->kelurahan_id]) }}" target="_blank"
+                           class="text-xs text-blue-600 hover:text-blue-800 hover:underline inline-flex items-center gap-1 font-normal">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                            Kelola Master Dusun
+                        </a>
+                    </div>
                     <select id="dusun_id" name="dusun_id"
                             class="w-full px-3 py-2 rounded border border-slate-300 bg-white outline-none focus:border-blue-600">
                         <option value="">-- Pilih Dusun (Opsional) --</option>
@@ -133,6 +140,11 @@
                             </option>
                         @endforeach
                     </select>
+                    @if($dusunList->isEmpty())
+                        <p class="text-[11px] text-amber-600 mt-1">
+                            * Belum ada data master dusun untuk wilayah ini. Klik <b>Kelola Master Dusun</b> untuk menambahkannya.
+                        </p>
+                    @endif
                 </div>
 
                 <div>

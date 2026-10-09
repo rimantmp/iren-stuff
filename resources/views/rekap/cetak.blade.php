@@ -77,6 +77,9 @@
                         <span class="text-[10px] text-slate-500">{{ $item->alamat_detail ?: '-' }}</span>
                     </td>
                     <td class="border border-slate-300 p-2 text-[11px]">
+                        @if($item->dusun)
+                            <span class="font-bold text-slate-900 block">Dusun {{ $item->dusun->nama }}</span>
+                        @endif
                         Kel. {{ $item->kelurahan?->nama }}<br>
                         Kec. {{ $item->kecamatan?->nama }}, {{ $item->kota?->nama }}
                     </td>

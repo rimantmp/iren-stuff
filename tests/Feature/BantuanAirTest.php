@@ -281,4 +281,66 @@ class BantuanAirTest extends TestCase
         $cetakRes->assertStatus(200);
         $cetakRes->assertSee('Dusun Karassik');
     }
+
+    public function test_authenticated_user_can_edit_and_update_bantuan_air_with_dusun(): void
+    {
+        $user = User::factory()->create();
+
+        $kelurahan = Kelurahan::firstOrCreate(
+            ['id' => '7326011002'],
+            ['nama' => 'Rantepao', 'latitude' => -2.97566, 'longitude' => 119.89841]
+        );
+
+        $dusunA = Dusun::create([
+            'kelurahan_id' => $kelurahan->id,
+            'nama' => 'Dusun Awal',
+        ]);
+
+        $dusunB = Dusun::create([
+            'kelurahan_id' => $kelurahan->id,
+            'nama' => 'Dusun Baru',
+        ]);
+
+        $air = JenisBantuan::where('slug', 'air')->first();
+
+        $penyaluran = PenyaluranBantuan::create([
+            'kode_transaksi' => 'BA-202610-9999',
+            'jenis_bantuan_id' => $air->id,
+            'provinsi_id' => '73',
+            'kota_id' => '7326',
+            'kecamatan_id' => '732601',
+            'kelurahan_id' => $kelurahan->id,
+            'dusun_id' => $dusunA->id,
+            'nama_penerima' => 'Warga Dusun Awal',
+            'jumlah_bantuan' => 4000,
+            'satuan' => 'Liter',
+            'tanggal_rencana' => '2026-10-25',
+            'status' => 'RENCANA',
+        ]);
+
+        // Access edit page
+        $editRes = $this->actingAs($user)->get(route('bantuan.air.edit', $penyaluran->id));
+        $editRes->assertStatus(200);
+        $editRes->assertSee('Dusun Awal');
+        $editRes->assertSee('Dusun Baru');
+        $editRes->assertSee('Kelola Master Dusun');
+
+        // Update to Dusun Baru
+        $updateRes = $this->actingAs($user)->put(route('bantuan.air.update', $penyaluran->id), [
+            'nama_penerima' => 'Warga Dusun Baru',
+            'dusun_id' => $dusunB->id,
+            'jumlah_bantuan' => 6000,
+            'satuan' => 'Liter',
+            'tanggal_rencana' => '2026-10-26',
+            'status' => 'PROSES',
+        ]);
+
+        $updateRes->assertRedirect(route('bantuan.air.show', $penyaluran->id));
+        $this->assertDatabaseHas('penyaluran_bantuan', [
+            'id' => $penyaluran->id,
+            'dusun_id' => $dusunB->id,
+            'nama_penerima' => 'Warga Dusun Baru',
+            'jumlah_bantuan' => 6000,
+        ]);
+    }
 }

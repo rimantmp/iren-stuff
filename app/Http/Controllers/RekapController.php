@@ -22,7 +22,7 @@ class RekapController extends Controller
      */
     public function index(Request $request): View
     {
-        $query = PenyaluranBantuan::with(['jenisBantuan', 'provinsi', 'kota', 'kecamatan', 'kelurahan']);
+        $query = PenyaluranBantuan::with(['jenisBantuan', 'provinsi', 'kota', 'kecamatan', 'kelurahan', 'dusun']);
 
         // Filters
         if ($request->filled('jenis_bantuan_id')) {
@@ -80,7 +80,7 @@ class RekapController extends Controller
      */
     public function cetak(Request $request): View
     {
-        $query = PenyaluranBantuan::with(['jenisBantuan', 'provinsi', 'kota', 'kecamatan', 'kelurahan']);
+        $query = PenyaluranBantuan::with(['jenisBantuan', 'provinsi', 'kota', 'kecamatan', 'kelurahan', 'dusun']);
 
         if ($request->filled('jenis_bantuan_id')) {
             $query->where('jenis_bantuan_id', $request->query('jenis_bantuan_id'));
@@ -249,6 +249,7 @@ class RekapController extends Controller
                 'Kabupaten / Kota',
                 'Kecamatan',
                 'Kelurahan / Lembang',
+                'Dusun / Lembang Sasaran',
                 'Target Rencana (Titik)',
                 'Target Rencana (Volume Liter)',
                 'Realisasi Tersalurkan (Titik)',
@@ -265,6 +266,7 @@ class RekapController extends Controller
                     $row['kota'],
                     $row['kecamatan'],
                     $row['kelurahan'],
+                    ! empty($row['dusun_names']) ? implode('; ', $row['dusun_names']) : '-',
                     $row['target_titik'],
                     $row['target_volume'],
                     $row['realisasi_titik'],
@@ -283,6 +285,7 @@ class RekapController extends Controller
                 $summary['total_kota'].' Kabupaten/Kota',
                 $summary['total_kecamatan'].' Kecamatan',
                 $summary['total_kelurahan'].' Kelurahan/Lembang',
+                ($summary['total_dusun_terbantu'] ?? 0).' Dusun',
                 $summary['total_target_titik'],
                 $summary['total_target_volume'],
                 $summary['total_realisasi_titik'],
@@ -311,7 +314,7 @@ class RekapController extends Controller
         $defaultKotaNama = $kotaObj?->nama ?? 'Kabupaten Toraja Utara';
 
         // Ambil data transaksi yang ada di database
-        $queryTx = PenyaluranBantuan::with(['jenisBantuan', 'provinsi', 'kota', 'kecamatan', 'kelurahan']);
+        $queryTx = PenyaluranBantuan::with(['jenisBantuan', 'provinsi', 'kota', 'kecamatan', 'kelurahan', 'dusun']);
 
         if ($request->filled('jenis_bantuan_id')) {
             $queryTx->where('jenis_bantuan_id', $request->query('jenis_bantuan_id'));
@@ -420,6 +423,12 @@ class RekapController extends Controller
 
             $satuan = $records->first()?->satuan ?: 'Liter';
 
+            $dusunNames = $records->filter(fn ($r) => ! empty($r->dusun_id) && $r->dusun)
+                ->map(fn ($r) => $r->dusun->nama)
+                ->unique()
+                ->values()
+                ->all();
+
             $item = [
                 'kota_id' => $regencyId,
                 'kota' => $thisKotaNama,
@@ -427,6 +436,7 @@ class RekapController extends Controller
                 'kecamatan' => $thisKecNama,
                 'kelurahan_id' => $kId,
                 'kelurahan' => $kel->nama,
+                'dusun_names' => $dusunNames,
                 'target_titik' => $targetTitik,
                 'target_volume' => $targetVolume,
                 'realisasi_titik' => $realisasiTitik,
@@ -481,6 +491,7 @@ class RekapController extends Controller
         $uniqueKota = count(array_unique(array_column($items, 'kota')));
         $uniqueKecamatan = count(array_unique(array_column($items, 'kecamatan')));
         $uniqueKelurahan = count($items);
+        $totalDusunTerbantu = $allTxRecords->filter(fn ($r) => ! empty($r->dusun_id))->pluck('dusun_id')->unique()->count();
 
         $totalDesaTersalur = $countDesaSelesai + $countDesaSebagian;
 
@@ -490,6 +501,7 @@ class RekapController extends Controller
                 'total_kota' => $uniqueKota,
                 'total_kecamatan' => $uniqueKecamatan,
                 'total_kelurahan' => $uniqueKelurahan,
+                'total_dusun_terbantu' => $totalDusunTerbantu,
                 'total_target_titik' => $totalTargetTitik,
                 'total_target_volume' => $totalTargetVolume,
                 'total_realisasi_titik' => $totalRealisasiTitik,
