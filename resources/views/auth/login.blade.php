@@ -129,8 +129,8 @@
                                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.206"/></svg>
                                 </div>
-                                <input type="email" id="email" name="email" value="{{ old('email', 'admin@bantuan.id') }}" required autofocus
-                                       placeholder="admin@bantuan.id"
+                                <input type="email" id="email" name="email" value="{{ old('email') }}" required autofocus
+                                       placeholder="nama@email.com"
                                        class="w-full pl-9 pr-3 py-2.5 rounded-lg border border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 outline-none transition text-xs text-slate-900 font-medium">
                             </div>
                         </div>
@@ -146,7 +146,7 @@
                                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
                                 </div>
-                                <input type="password" id="password" name="password" required value="admin123"
+                                <input type="password" id="password" name="password" required
                                        placeholder="••••••••"
                                        class="w-full pl-9 pr-10 py-2.5 rounded-lg border border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 outline-none transition text-xs text-slate-900 font-medium">
                                 <button type="button" onclick="togglePasswordVisibility()"
@@ -173,25 +173,6 @@
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
                         </button>
                     </form>
-
-                    <!-- Quick Autofill Helper -->
-                    <div class="mt-6 pt-5 border-t border-slate-100">
-                        <div class="bg-slate-50 border border-slate-200 rounded-lg p-3 text-slate-600">
-                            <div class="flex items-center justify-between mb-1.5">
-                                <span class="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Akses Bawaan Sistem:</span>
-                                <button type="button" onclick="fillDefaultCredentials()"
-                                        class="text-[10px] text-blue-700 hover:text-blue-900 font-semibold hover:underline flex items-center space-x-1">
-                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"/></svg>
-                                    <span>Gunakan Kredensial Ini</span>
-                                </button>
-                            </div>
-                            <div class="flex items-center justify-between text-[11px] font-mono text-slate-800">
-                                <span>admin@bantuan.id</span>
-                                <span class="text-slate-400">•</span>
-                                <span>admin123</span>
-                            </div>
-                        </div>
-                    </div>
                 </div>
 
                 <!-- Footer Security Badge -->
@@ -220,11 +201,6 @@
                 eyeIcon.classList.remove('hidden');
                 eyeSlashIcon.classList.add('hidden');
             }
-        }
-
-        function fillDefaultCredentials() {
-            document.getElementById('email').value = 'admin@bantuan.id';
-            document.getElementById('password').value = 'admin123';
         }
 
         document.getElementById('formLogin').addEventListener('submit', function() {
