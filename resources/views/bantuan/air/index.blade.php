@@ -111,7 +111,12 @@
                                 <span class="text-[10px] text-slate-400 block">({{ $item->jumlah_kk }} KK / {{ $item->jumlah_jiwa }} Jiwa)</span>
                             </td>
                             <td class="py-3 px-4">
-                                <span class="font-medium text-slate-800 block">Kel. {{ $item->kelurahan?->nama }}</span>
+                                @if($item->dusun)
+                                    <span class="font-semibold text-blue-900 block">Dusun {{ $item->dusun->nama }}</span>
+                                    <span class="text-[11px] text-slate-700 block">Kel. {{ $item->kelurahan?->nama }}</span>
+                                @else
+                                    <span class="font-medium text-slate-800 block">Kel. {{ $item->kelurahan?->nama }}</span>
+                                @endif
                                 <span class="text-[11px] text-slate-500 block">Kec. {{ $item->kecamatan?->nama }}, {{ $item->kota?->nama }}</span>
                                 <span class="text-[10px] text-slate-400 truncate max-w-xs block">{{ $item->alamat_detail }}</span>
                             </td>

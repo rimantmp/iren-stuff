@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Dusun;
 use App\Models\JenisBantuan;
 use App\Models\Kelurahan;
 use App\Models\Kota;
@@ -22,7 +23,7 @@ class BantuanAirController extends Controller
     {
         $air = JenisBantuan::where('slug', 'air')->firstOrFail();
 
-        $query = PenyaluranBantuan::with(['kelurahan', 'kecamatan', 'kota', 'provinsi'])
+        $query = PenyaluranBantuan::with(['kelurahan', 'kecamatan', 'kota', 'provinsi', 'dusun'])
             ->where('jenis_bantuan_id', $air->id);
 
         if ($request->filled('status')) {
@@ -35,7 +36,10 @@ class BantuanAirController extends Controller
                 $q->where('kode_transaksi', 'like', "%{$search}%")
                     ->orWhere('nama_penerima', 'like', "%{$search}%")
                     ->orWhere('nomor_armada', 'like', "%{$search}%")
-                    ->orWhere('alamat_detail', 'like', "%{$search}%");
+                    ->orWhere('alamat_detail', 'like', "%{$search}%")
+                    ->orWhereHas('dusun', function ($dq) use ($search): void {
+                        $dq->where('nama', 'like', "%{$search}%");
+                    });
             });
         }
 
@@ -93,6 +97,7 @@ class BantuanAirController extends Controller
             'kota_id' => ['required', 'string'],
             'kecamatan_id' => ['required', 'string'],
             'kelurahan_id' => ['required', 'string'],
+            'dusun_id' => ['nullable', 'integer', 'exists:t_dusun,id'],
             'alamat_detail' => ['nullable', 'string'],
             'jumlah_bantuan' => ['required', 'numeric', 'min:1'],
             'satuan' => ['required', 'string'],
@@ -109,15 +114,16 @@ class BantuanAirController extends Controller
             'foto_dokumentasi' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
         ]);
 
-        // Auto coordinate from kelurahan if not explicitly passed
+        // Auto coordinate from dusun or kelurahan if not explicitly passed
+        $dusun = ! empty($validated['dusun_id']) ? Dusun::find($validated['dusun_id']) : null;
         $kelurahan = Kelurahan::find($validated['kelurahan_id']);
         $latitude = ($request->filled('latitude') && (float) $request->input('latitude') != 0)
             ? (float) $request->input('latitude')
-            : ($kelurahan?->latitude ?? 0);
+            : ($dusun?->latitude ?? $kelurahan?->latitude ?? 0);
 
         $longitude = ($request->filled('longitude') && (float) $request->input('longitude') != 0)
             ? (float) $request->input('longitude')
-            : ($kelurahan?->longitude ?? 0);
+            : ($dusun?->longitude ?? $kelurahan?->longitude ?? 0);
 
         // Auto generate kode transaksi (e.g. BA-202610-0004)
         $datePrefix = 'BA-'.date('Ym');
@@ -144,6 +150,7 @@ class BantuanAirController extends Controller
             'kota_id' => $validated['kota_id'],
             'kecamatan_id' => $validated['kecamatan_id'],
             'kelurahan_id' => $validated['kelurahan_id'],
+            'dusun_id' => $validated['dusun_id'] ?? null,
             'alamat_detail' => $validated['alamat_detail'] ?? null,
             'latitude' => $latitude,
             'longitude' => $longitude,
@@ -172,7 +179,7 @@ class BantuanAirController extends Controller
      */
     public function show(int $id): View
     {
-        $penyaluran = PenyaluranBantuan::with(['kelurahan', 'kecamatan', 'kota', 'provinsi', 'jenisBantuan'])
+        $penyaluran = PenyaluranBantuan::with(['kelurahan', 'kecamatan', 'kota', 'provinsi', 'jenisBantuan', 'dusun'])
             ->findOrFail($id);
 
         return view('bantuan.air.show', compact('penyaluran'));
@@ -183,7 +190,7 @@ class BantuanAirController extends Controller
      */
     public function cetak(int $id): View
     {
-        $penyaluran = PenyaluranBantuan::with(['kelurahan', 'kecamatan', 'kota', 'provinsi', 'jenisBantuan'])
+        $penyaluran = PenyaluranBantuan::with(['kelurahan', 'kecamatan', 'kota', 'provinsi', 'jenisBantuan', 'dusun'])
             ->findOrFail($id);
 
         return view('bantuan.air.cetak', compact('penyaluran'));
@@ -194,10 +201,12 @@ class BantuanAirController extends Controller
      */
     public function edit(int $id): View
     {
-        $penyaluran = PenyaluranBantuan::with(['kelurahan', 'kecamatan', 'kota', 'provinsi'])
+        $penyaluran = PenyaluranBantuan::with(['kelurahan', 'kecamatan', 'kota', 'provinsi', 'dusun'])
             ->findOrFail($id);
 
-        return view('bantuan.air.edit', compact('penyaluran'));
+        $dusunList = Dusun::where('kelurahan_id', $penyaluran->kelurahan_id)->orderBy('nama')->get();
+
+        return view('bantuan.air.edit', compact('penyaluran', 'dusunList'));
     }
 
     /**
@@ -219,6 +228,7 @@ class BantuanAirController extends Controller
             'kontak_penerima' => ['nullable', 'string', 'max:50'],
             'jumlah_kk' => ['nullable', 'integer', 'min:0'],
             'jumlah_jiwa' => ['nullable', 'integer', 'min:0'],
+            'dusun_id' => ['nullable', 'integer', 'exists:t_dusun,id'],
             'alamat_detail' => ['nullable', 'string'],
             'jumlah_bantuan' => ['required', 'numeric', 'min:1'],
             'satuan' => ['required', 'string'],

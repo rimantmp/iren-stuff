@@ -175,10 +175,10 @@
                         <td class="text-slate-800 py-0.5">{{ $penyaluran->alamat_detail ?: '-' }}</td>
                     </tr>
                     <tr class="align-top">
-                        <td class="text-slate-500 py-0.5">Kelurahan / Lembang</td>
+                        <td class="text-slate-500 py-0.5">Wilayah Administrasi</td>
                         <td class="py-0.5">:</td>
                         <td class="text-slate-800 py-0.5">
-                            Kel. {{ $penyaluran->kelurahan?->nama ?? '-' }}, Kec. {{ $penyaluran->kecamatan?->nama ?? '-' }}
+                            {{ $penyaluran->dusun ? 'Dusun '.$penyaluran->dusun->nama.', ' : '' }}Kel. {{ $penyaluran->kelurahan?->nama ?? '-' }}, Kec. {{ $penyaluran->kecamatan?->nama ?? '-' }}
                         </td>
                     </tr>
                 </table>
