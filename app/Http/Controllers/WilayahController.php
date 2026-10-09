@@ -28,7 +28,7 @@ class WilayahController extends Controller
     {
         $search = $request->query('q');
 
-        $query = Provinsi::query();
+        $query = Provinsi::aktif();
 
         if ($search) {
             $query->where('nama', 'like', '%'.$search.'%');
@@ -53,7 +53,7 @@ class WilayahController extends Controller
     {
         $search = $request->query('q');
 
-        $query = Kota::where('id', 'like', $provinsiId.'%');
+        $query = Kota::aktif()->where('id', 'like', $provinsiId.'%');
 
         if ($search) {
             $query->where('nama', 'like', '%'.$search.'%');
@@ -134,8 +134,22 @@ class WilayahController extends Controller
             return response()->json(['results' => []]);
         }
 
-        $items = Kelurahan::where('nama', 'like', '%'.$search.'%')
-            ->orWhere('id', 'like', '%'.$search.'%')
+        $activeKotaIds = Kota::aktif()->pluck('id');
+
+        $query = Kelurahan::query();
+
+        if ($activeKotaIds->isNotEmpty()) {
+            $query->where(function ($q) use ($activeKotaIds): void {
+                foreach ($activeKotaIds as $kotaId) {
+                    $q->orWhere('id', 'like', $kotaId.'%');
+                }
+            });
+        }
+
+        $items = $query->where(function ($q) use ($search): void {
+            $q->where('nama', 'like', '%'.$search.'%')
+                ->orWhere('id', 'like', '%'.$search.'%');
+        })
             ->limit(30)
             ->get();
 

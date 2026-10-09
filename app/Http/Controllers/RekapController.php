@@ -64,7 +64,7 @@ class RekapController extends Controller
         $laporanList = $query->latest('tanggal_rencana')->paginate(20)->withQueryString();
 
         $semuaJenisBantuan = JenisBantuan::where('status_aktif', true)->get();
-        $semuaProvinsi = Provinsi::orderBy('nama')->get();
+        $semuaProvinsi = Provinsi::aktif()->orderBy('nama')->get();
 
         return view('rekap.index', compact(
             'laporanList',
@@ -156,8 +156,9 @@ class RekapController extends Controller
         );
 
         $semuaJenisBantuan = JenisBantuan::where('status_aktif', true)->get();
-        // Daftar Kabupaten/Kota di Sulawesi Selatan (Dapil Sulsel III / Wilayah Kerja)
-        $semuaKota = Kota::where('id', 'like', '73%')
+        // Daftar Kabupaten/Kota aktif di Sulawesi Selatan (Dapil Sulsel III / Wilayah Kerja)
+        $semuaKota = Kota::aktif()
+            ->where('id', 'like', '73%')
             ->orderBy('nama')
             ->get();
 
@@ -165,7 +166,16 @@ class RekapController extends Controller
         if ($selectedKotaId !== 'SEMUA') {
             $kecamatanQuery->where('id', 'like', $selectedKotaId.'%');
         } else {
-            $kecamatanQuery->where('id', 'like', '73%');
+            $activeKotaIds = $semuaKota->pluck('id');
+            if ($activeKotaIds->isNotEmpty()) {
+                $kecamatanQuery->where(function ($q) use ($activeKotaIds): void {
+                    foreach ($activeKotaIds as $kid) {
+                        $q->orWhere('id', 'like', $kid.'%');
+                    }
+                });
+            } else {
+                $kecamatanQuery->where('id', 'like', '73%');
+            }
         }
         $semuaKecamatan = $kecamatanQuery->orderBy('nama')->get();
 

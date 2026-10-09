@@ -59,9 +59,13 @@ Route::middleware('auth')->group(function (): void {
     Route::prefix('master')->name('master.')->group(function (): void {
         Route::get('/provinsi', [MasterWilayahController::class, 'provinsi'])->name('provinsi');
         Route::put('/provinsi/{id}', [MasterWilayahController::class, 'updateProvinsi'])->name('provinsi.update');
+        Route::patch('/provinsi/{id}/toggle', [MasterWilayahController::class, 'toggleProvinsi'])->name('provinsi.toggle');
+        Route::post('/provinsi/batch-status', [MasterWilayahController::class, 'batchUpdateStatusProvinsi'])->name('provinsi.batch-status');
 
         Route::get('/kota', [MasterWilayahController::class, 'kota'])->name('kota');
         Route::put('/kota/{id}', [MasterWilayahController::class, 'updateKota'])->name('kota.update');
+        Route::patch('/kota/{id}/toggle', [MasterWilayahController::class, 'toggleKota'])->name('kota.toggle');
+        Route::post('/kota/batch-status', [MasterWilayahController::class, 'batchUpdateStatusKota'])->name('kota.batch-status');
 
         Route::get('/kecamatan', [MasterWilayahController::class, 'kecamatan'])->name('kecamatan');
         Route::put('/kecamatan/{id}', [MasterWilayahController::class, 'updateKecamatan'])->name('kecamatan.update');
