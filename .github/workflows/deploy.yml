@@ -1,0 +1,35 @@
+name: Deploy to cPanel
+
+on:
+  push:
+    branches:
+      - main # Ubah menjadi 'master' jika branch utama kamu bernama master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Eksekusi SSH ke cPanel
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.CPANEL_HOST }}
+          username: ${{ secrets.CPANEL_USERNAME }}
+          password: ${{ secrets.CPANEL_PASSWORD }}
+          port: ${{ secrets.CPANEL_PORT }}
+          script: |
+            # 1. Masuk ke direktori project
+            cd /home/${{ secrets.CPANEL_USERNAME }}/public_html/iren-stuff
+            
+            # 2. Tarik kode terbaru dari GitHub
+            git pull origin main
+            
+            # 3. Install/Update dependensi menggunakan path PHP 8.4
+            /opt/alt/php84/usr/bin/php $(which composer) install --no-dev --optimize-autoloader
+            
+            # 4. Jalankan migrasi database
+            /opt/alt/php84/usr/bin/php artisan migrate --force
+            
+            # 5. Bersihkan seluruh cache
+            /opt/alt/php84/usr/bin/php artisan config:clear
+            /opt/alt/php84/usr/bin/php artisan route:clear
+            /opt/alt/php84/usr/bin/php artisan view:clear
