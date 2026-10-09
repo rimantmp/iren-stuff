@@ -97,7 +97,8 @@ class RekapPerbandinganTest extends TestCase
         $response = $this->actingAs($user)->get(route('rekap.perbandingan.excel'));
 
         $response->assertStatus(200);
-        $this->assertStringContainsString('text/csv', $response->headers->get('content-type') ?? '');
+        $this->assertStringContainsString('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', $response->headers->get('content-type') ?? '');
+        $this->assertStringContainsString('.xlsx', $response->headers->get('content-disposition') ?? '');
     }
 
     public function test_authenticated_user_can_filter_by_status_tersalurkan_dan_belum(): void
@@ -193,11 +194,13 @@ class RekapPerbandinganTest extends TestCase
         $perbandinganCetak->assertStatus(200);
         $perbandinganCetak->assertSee('Dusun Singki');
 
-        // Perbandingan CSV Export
-        $csvResponse = $this->actingAs($user)->get(route('rekap.perbandingan.excel'));
-        $csvResponse->assertStatus(200);
-        $content = $csvResponse->streamedContent();
-        $this->assertStringContainsString('Dusun / Lembang Sasaran', $content);
-        $this->assertStringContainsString('Dusun Singki', $content);
+        // Perbandingan XLSX Export
+        $excelResponse = $this->actingAs($user)->get(route('rekap.perbandingan.excel'));
+        $excelResponse->assertStatus(200);
+        $this->assertStringContainsString('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', $excelResponse->headers->get('content-type') ?? '');
+        $this->assertStringContainsString('.xlsx', $excelResponse->headers->get('content-disposition') ?? '');
+        $content = $excelResponse->streamedContent();
+        // File XLSX diawali dengan zip magic byte PK (0x50 0x4B)
+        $this->assertStringStartsWith('PK', $content);
     }
 }
