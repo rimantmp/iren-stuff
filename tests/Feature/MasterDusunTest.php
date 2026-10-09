@@ -157,4 +157,73 @@ class MasterDusunTest extends TestCase
         $dusunRes->assertStatus(200);
         $dusunRes->assertJsonFragment(['text' => 'Dusun Ba\'tan']);
     }
+
+    public function test_admin_can_filter_dusun_by_kota_id(): void
+    {
+        // Kelurahan in Toraja Utara (7326)
+        $dusunTorut = Dusun::create([
+            'kelurahan_id' => $this->kelurahan->id,
+            'nama' => 'Dusun Torut Karassik',
+        ]);
+
+        // Create Kelurahan in Tana Toraja (7318)
+        $kelTator = Kelurahan::create([
+            'id' => '7318011001',
+            'nama' => 'Kelurahan Makale',
+            'latitude' => 0,
+            'longitude' => 0,
+        ]);
+
+        $dusunTator = Dusun::create([
+            'kelurahan_id' => $kelTator->id,
+            'nama' => 'Dusun Tator Pantan',
+        ]);
+
+        // Filter by Toraja Utara (7326)
+        $responseTorut = $this->actingAs($this->user)->get(route('master.dusun', ['kota_id' => '7326']));
+        $responseTorut->assertOk();
+        $responseTorut->assertSee('Dusun Torut Karassik');
+        $responseTorut->assertDontSee('Dusun Tator Pantan');
+
+        // Filter by Tana Toraja (7318)
+        $responseTator = $this->actingAs($this->user)->get(route('master.dusun', ['kota_id' => '7318']));
+        $responseTator->assertOk();
+        $responseTator->assertSee('Dusun Tator Pantan');
+        $responseTator->assertDontSee('Dusun Torut Karassik');
+    }
+
+    public function test_ajax_search_kelurahan_with_kota_id_parameter(): void
+    {
+        $kelTator = Kelurahan::create([
+            'id' => '7318011002',
+            'nama' => 'Lembang Batualu',
+            'latitude' => 0,
+            'longitude' => 0,
+        ]);
+
+        // Search with kota_id=7326 (Toraja Utara) should only return Singki, not Batualu
+        $searchRes = $this->actingAs($this->user)->getJson(route('wilayah.kelurahan-search', [
+            'q' => 'Singki',
+            'kota_id' => '7326',
+        ]));
+        $searchRes->assertOk();
+        $searchRes->assertJsonFragment(['id' => $this->kelurahan->id]);
+
+        // Search Batualu with kota_id=7326 should yield empty
+        $searchWrong = $this->actingAs($this->user)->getJson(route('wilayah.kelurahan-search', [
+            'q' => 'Batualu',
+            'kota_id' => '7326',
+        ]));
+        $searchWrong->assertOk();
+        $searchWrong->assertJsonCount(0, 'results');
+
+        // Search Batualu with kota_id=7318 should return Batualu
+        $searchRight = $this->actingAs($this->user)->getJson(route('wilayah.kelurahan-search', [
+            'q' => 'Batualu',
+            'kota_id' => '7318',
+        ]));
+        $searchRight->assertOk();
+        $searchRight->assertJsonCount(1, 'results');
+        $searchRight->assertJsonFragment(['id' => $kelTator->id]);
+    }
 }

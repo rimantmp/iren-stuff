@@ -134,11 +134,14 @@ class WilayahController extends Controller
             return response()->json(['results' => []]);
         }
 
+        $filterKotaId = $request->query('kota_id');
         $activeKotaIds = Kota::aktif()->pluck('id');
 
         $query = Kelurahan::query();
 
-        if ($activeKotaIds->isNotEmpty()) {
+        if ($filterKotaId) {
+            $query->where('id', 'like', $filterKotaId.'%');
+        } elseif ($activeKotaIds->isNotEmpty()) {
             $query->where(function ($q) use ($activeKotaIds): void {
                 foreach ($activeKotaIds as $kotaId) {
                     $q->orWhere('id', 'like', $kotaId.'%');

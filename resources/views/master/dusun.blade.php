@@ -39,15 +39,24 @@
             </div>
 
             <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                <!-- Search Form -->
-                <form method="GET" action="{{ route('master.dusun') }}" class="flex items-center space-x-2">
+                <!-- Search & Filter Form -->
+                <form method="GET" action="{{ route('master.dusun') }}" class="flex flex-wrap items-center gap-2">
+                    <select name="kota_id" onchange="this.form.submit()" class="px-2.5 py-1.5 border border-slate-300 rounded text-xs outline-none bg-white">
+                        <option value="">Semua Kabupaten / Kota</option>
+                        @foreach($activeKotaList as $kota)
+                            <option value="{{ $kota->id }}" {{ request('kota_id') == $kota->id ? 'selected' : '' }}>
+                                {{ $kota->nama }}
+                            </option>
+                        @endforeach
+                    </select>
+
                     <input type="text" name="search" value="{{ request('search') }}"
                            placeholder="Cari dusun, desa, kepala..."
-                           class="px-3 py-1.5 border border-slate-300 rounded text-xs outline-none focus:border-blue-600 w-48 sm:w-60">
+                           class="px-3 py-1.5 border border-slate-300 rounded text-xs outline-none focus:border-blue-600 w-44 sm:w-56">
                     <button type="submit" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded text-xs font-medium transition">
                         Cari
                     </button>
-                    @if(request('search'))
+                    @if(request('search') || request('kota_id'))
                         <a href="{{ route('master.dusun') }}" class="text-xs text-slate-500 hover:underline">Reset</a>
                     @endif
                 </form>
@@ -192,6 +201,22 @@
         <form action="{{ route('master.dusun.store') }}" method="POST" class="space-y-3.5 text-xs">
             @csrf
 
+            <!-- Filter Kabupaten / Kota -->
+            <div>
+                <label for="create_filter_kota_id" class="block font-medium text-slate-700 mb-1">
+                    Kabupaten / Kota
+                </label>
+                <select id="create_filter_kota_id" class="w-full px-2.5 py-1.5 border border-slate-300 rounded outline-none focus:border-blue-600 bg-white text-xs">
+                    <option value="">-- Semua Kabupaten / Kota Aktif --</option>
+                    @foreach($activeKotaList as $kota)
+                        <option value="{{ $kota->id }}" {{ $kota->id == '7326' ? 'selected' : '' }}>
+                            {{ $kota->nama }}
+                        </option>
+                    @endforeach
+                </select>
+                <span class="text-[10px] text-slate-500 mt-0.5 block">Pilih kabupaten untuk mempersempit pilihan desa / kelurahan</span>
+            </div>
+
             <!-- Kelurahan / Desa Select2 -->
             <div>
                 <label for="create_kelurahan_id" class="block font-medium text-slate-700 mb-1">
@@ -283,6 +308,22 @@
             @csrf
             @method('PUT')
 
+            <!-- Filter Kabupaten / Kota -->
+            <div>
+                <label for="edit_filter_kota_id" class="block font-medium text-slate-700 mb-1">
+                    Kabupaten / Kota
+                </label>
+                <select id="edit_filter_kota_id" class="w-full px-2.5 py-1.5 border border-slate-300 rounded outline-none focus:border-blue-600 bg-white text-xs">
+                    <option value="">-- Semua Kabupaten / Kota Aktif --</option>
+                    @foreach($activeKotaList as $kota)
+                        <option value="{{ $kota->id }}">
+                            {{ $kota->nama }}
+                        </option>
+                    @endforeach
+                </select>
+                <span class="text-[10px] text-slate-500 mt-0.5 block">Pilih kabupaten untuk mempersempit pilihan desa / kelurahan</span>
+            </div>
+
             <!-- Kelurahan / Desa Select2 -->
             <div>
                 <label for="edit_kelurahan_id" class="block font-medium text-slate-700 mb-1">
@@ -372,9 +413,17 @@
                 url: searchKelurahanUrl,
                 dataType: 'json',
                 delay: 250,
-                data: params => ({ q: params.term }),
+                data: params => ({
+                    q: params.term,
+                    kota_id: $('#create_filter_kota_id').val()
+                }),
                 processResults: data => ({ results: data.results })
             }
+        });
+
+        // Reset kelurahan selection when filter kabupaten changes in create modal
+        $('#create_filter_kota_id').on('change', function() {
+            $('#create_kelurahan_id').val(null).trigger('change');
         });
 
         // Set coordinates automatically when kelurahan selected in create modal
@@ -397,9 +446,17 @@
                 url: searchKelurahanUrl,
                 dataType: 'json',
                 delay: 250,
-                data: params => ({ q: params.term }),
+                data: params => ({
+                    q: params.term,
+                    kota_id: $('#edit_filter_kota_id').val()
+                }),
                 processResults: data => ({ results: data.results })
             }
+        });
+
+        // Reset kelurahan selection when filter kabupaten changes in edit modal
+        $('#edit_filter_kota_id').on('change', function() {
+            $('#edit_kelurahan_id').val(null).trigger('change');
         });
     });
 
@@ -420,6 +477,10 @@
         $('#edit_lat').val(lat);
         $('#edit_lng').val(lng);
         $('#edit_keterangan').val(keterangan);
+
+        // Pre-select kabupaten in edit modal
+        const kotaId = (kelurahanId && kelurahanId.length >= 4) ? kelurahanId.substring(0, 4) : '';
+        $('#edit_filter_kota_id').val(kotaId);
 
         // Pre-select kelurahan in edit modal Select2
         if (kelurahanId) {

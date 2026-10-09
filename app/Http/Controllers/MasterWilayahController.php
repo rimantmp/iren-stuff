@@ -279,6 +279,10 @@ class MasterWilayahController extends Controller
     {
         $query = Dusun::with('kelurahan');
 
+        if ($request->filled('kota_id')) {
+            $query->where('kelurahan_id', 'like', $request->query('kota_id').'%');
+        }
+
         if ($request->filled('kelurahan_id')) {
             $query->where('kelurahan_id', $request->query('kelurahan_id'));
         }
@@ -297,8 +301,9 @@ class MasterWilayahController extends Controller
         }
 
         $items = $query->latest('id')->paginate(20)->withQueryString();
+        $activeKotaList = Kota::aktif()->orderBy('nama')->get();
 
-        return view('master.dusun', compact('items'));
+        return view('master.dusun', compact('items', 'activeKotaList'));
     }
 
     public function storeDusun(Request $request): RedirectResponse
