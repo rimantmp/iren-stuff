@@ -226,4 +226,66 @@ class MasterDusunTest extends TestCase
         $searchRight->assertJsonCount(1, 'results');
         $searchRight->assertJsonFragment(['id' => $kelTator->id]);
     }
+
+    public function test_admin_can_filter_dusun_by_kecamatan_id(): void
+    {
+        // Kelurahan 7326011001 (Kecamatan 732601)
+        $dusunKec1 = Dusun::create([
+            'kelurahan_id' => $this->kelurahan->id,
+            'nama' => 'Dusun Rantepao Satu',
+        ]);
+
+        // Create Kelurahan in another kecamatan 7326021001 (Kecamatan 732602)
+        $kelKec2 = Kelurahan::create([
+            'id' => '7326021001',
+            'nama' => 'Kelurahan Tallunglipu',
+            'latitude' => 0,
+            'longitude' => 0,
+        ]);
+
+        $dusunKec2 = Dusun::create([
+            'kelurahan_id' => $kelKec2->id,
+            'nama' => 'Dusun Tallunglipu Dua',
+        ]);
+
+        // Filter by Kecamatan 732601
+        $resKec1 = $this->actingAs($this->user)->get(route('master.dusun', ['kecamatan_id' => '732601']));
+        $resKec1->assertOk();
+        $resKec1->assertSee('Dusun Rantepao Satu');
+        $resKec1->assertDontSee('Dusun Tallunglipu Dua');
+
+        // Filter by Kecamatan 732602
+        $resKec2 = $this->actingAs($this->user)->get(route('master.dusun', ['kecamatan_id' => '732602']));
+        $resKec2->assertOk();
+        $resKec2->assertSee('Dusun Tallunglipu Dua');
+        $resKec2->assertDontSee('Dusun Rantepao Satu');
+    }
+
+    public function test_ajax_search_kelurahan_with_kecamatan_id_parameter(): void
+    {
+        // Kelurahan in 732602
+        $kelKec2 = Kelurahan::create([
+            'id' => '7326021002',
+            'nama' => 'Lembang Tagari',
+            'latitude' => 0,
+            'longitude' => 0,
+        ]);
+
+        // Search Tagari with kecamatan_id=732601 should return 0 results
+        $resWrong = $this->actingAs($this->user)->getJson(route('wilayah.kelurahan-search', [
+            'q' => 'Tagari',
+            'kecamatan_id' => '732601',
+        ]));
+        $resWrong->assertOk();
+        $resWrong->assertJsonCount(0, 'results');
+
+        // Search Tagari with kecamatan_id=732602 should return Tagari
+        $resRight = $this->actingAs($this->user)->getJson(route('wilayah.kelurahan-search', [
+            'q' => 'Tagari',
+            'kecamatan_id' => '732602',
+        ]));
+        $resRight->assertOk();
+        $resRight->assertJsonCount(1, 'results');
+        $resRight->assertJsonFragment(['id' => $kelKec2->id]);
+    }
 }
