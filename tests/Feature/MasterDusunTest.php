@@ -380,4 +380,51 @@ class MasterDusunTest extends TestCase
 
         $response->assertSessionHasErrors(['kelurahan_id']);
     }
+
+    public function test_admin_can_search_dusun_by_keyword_matching_dusun_name(): void
+    {
+        Dusun::create([
+            'kelurahan_id' => $this->kelurahan->id,
+            'nama' => 'Dusun Saloso Indah',
+            'kepala_dusun' => 'Bpk. Herman',
+        ]);
+
+        Dusun::create([
+            'kelurahan_id' => $this->kelurahan->id,
+            'nama' => 'Dusun Marannu',
+            'kepala_dusun' => 'Bpk. Markus',
+        ]);
+
+        $response = $this->actingAs($this->user)->get(route('master.dusun', ['search' => 'Saloso']));
+
+        $response->assertOk();
+        $response->assertSee('Dusun Saloso Indah');
+        $response->assertDontSee('Dusun Marannu');
+    }
+
+    public function test_admin_can_search_dusun_by_keyword_matching_kelurahan_name(): void
+    {
+        $otherKelurahan = Kelurahan::create([
+            'id' => '7326011099',
+            'nama' => 'Kelurahan Saloso Raya',
+            'latitude' => 0,
+            'longitude' => 0,
+        ]);
+
+        Dusun::create([
+            'kelurahan_id' => $otherKelurahan->id,
+            'nama' => 'Dusun Anggrek',
+        ]);
+
+        Dusun::create([
+            'kelurahan_id' => $this->kelurahan->id,
+            'nama' => 'Dusun Melati',
+        ]);
+
+        $response = $this->actingAs($this->user)->get(route('master.dusun', ['search' => 'Saloso Raya']));
+
+        $response->assertOk();
+        $response->assertSee('Dusun Anggrek');
+        $response->assertDontSee('Dusun Melati');
+    }
 }
