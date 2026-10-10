@@ -22,11 +22,11 @@ class AdminUserTest extends TestCase
         $responseIndex->assertStatus(200);
         $responseIndex->assertSee('Admin Utama');
         $responseIndex->assertSee('admin@bantuan.id');
-        $responseIndex->assertSee('Tambah Admin Baru');
+        $responseIndex->assertSee('Tambah Pengguna Baru');
 
         $responseCreate = $this->actingAs($admin)->get(route('admin.users.create'));
         $responseCreate->assertStatus(200);
-        $responseCreate->assertSee('Formulir Pendaftaran Administrator');
+        $responseCreate->assertSee('Formulir Pendaftaran Pengguna');
     }
 
     public function test_can_create_new_administrator(): void

@@ -28,7 +28,7 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
 
     // Bantuan Air (Fitur Utama)
-    Route::prefix('bantuan/air')->name('bantuan.air.')->group(function (): void {
+    Route::prefix('bantuan/air')->name('bantuan.air.')->middleware('permission:bantuan_air')->group(function (): void {
         Route::get('/', [BantuanAirController::class, 'index'])->name('index');
         Route::get('/tambah', [BantuanAirController::class, 'create'])->name('create');
         Route::post('/', [BantuanAirController::class, 'store'])->name('store');
@@ -41,14 +41,14 @@ Route::middleware('auth')->group(function (): void {
     });
 
     // Program Bantuan Lainnya (Coming Soon)
-    Route::prefix('bantuan')->name('bantuan.')->group(function (): void {
+    Route::prefix('bantuan')->name('bantuan.')->middleware('permission:bantuan_air')->group(function (): void {
         Route::get('/sembako', [ProgramBantuanController::class, 'sembako'])->name('sembako');
         Route::get('/tunai-gereja', [ProgramBantuanController::class, 'tunaiGereja'])->name('tunai-gereja');
         Route::get('/pengadaan', [ProgramBantuanController::class, 'pengadaan'])->name('pengadaan');
     });
 
     // Kelola Master Jenis Bantuan
-    Route::prefix('bantuan/jenis')->name('bantuan.jenis.')->group(function (): void {
+    Route::prefix('bantuan/jenis')->name('bantuan.jenis.')->middleware('permission:bantuan_air')->group(function (): void {
         Route::get('/', [JenisBantuanController::class, 'index'])->name('index');
         Route::post('/', [JenisBantuanController::class, 'store'])->name('store');
         Route::put('/{id}', [JenisBantuanController::class, 'update'])->name('update');
@@ -56,7 +56,7 @@ Route::middleware('auth')->group(function (): void {
     });
 
     // Master Data Wilayah
-    Route::prefix('master')->name('master.')->group(function (): void {
+    Route::prefix('master')->name('master.')->middleware('permission:wilayah')->group(function (): void {
         Route::get('/provinsi', [MasterWilayahController::class, 'provinsi'])->name('provinsi');
         Route::put('/provinsi/{id}', [MasterWilayahController::class, 'updateProvinsi'])->name('provinsi.update');
         Route::patch('/provinsi/{id}/toggle', [MasterWilayahController::class, 'toggleProvinsi'])->name('provinsi.toggle');
@@ -81,7 +81,7 @@ Route::middleware('auth')->group(function (): void {
     });
 
     // Rekapitulasi & Laporan
-    Route::prefix('rekap')->name('rekap.')->group(function (): void {
+    Route::prefix('rekap')->name('rekap.')->middleware('permission:rekap')->group(function (): void {
         Route::get('/', [RekapController::class, 'index'])->name('index');
         Route::get('/cetak', [RekapController::class, 'cetak'])->name('cetak');
         Route::get('/perbandingan', [RekapController::class, 'perbandingan'])->name('perbandingan');
@@ -90,7 +90,7 @@ Route::middleware('auth')->group(function (): void {
     });
 
     // Manajemen Administrator
-    Route::prefix('admin/users')->name('admin.users.')->group(function (): void {
+    Route::prefix('admin/users')->name('admin.users.')->middleware('permission:users')->group(function (): void {
         Route::get('/', [AdminUserController::class, 'index'])->name('index');
         Route::get('/tambah', [AdminUserController::class, 'create'])->name('create');
         Route::post('/', [AdminUserController::class, 'store'])->name('store');
@@ -100,7 +100,7 @@ Route::middleware('auth')->group(function (): void {
     });
 
     // Backup & Pemulihan Basis Data
-    Route::prefix('admin/backup')->name('admin.backup.')->group(function (): void {
+    Route::prefix('admin/backup')->name('admin.backup.')->middleware('permission:backup')->group(function (): void {
         Route::get('/', [BackupController::class, 'index'])->name('index');
         Route::post('/generate', [BackupController::class, 'store'])->name('store');
         Route::get('/download/{filename}', [BackupController::class, 'download'])
@@ -112,7 +112,7 @@ Route::middleware('auth')->group(function (): void {
     });
 
     // AJAX Endpoint Select2 Wilayah
-    Route::prefix('wilayah')->name('wilayah.')->group(function (): void {
+    Route::prefix('wilayah')->name('wilayah.')->middleware('permission:wilayah,bantuan_air')->group(function (): void {
         Route::get('/provinsi', [WilayahController::class, 'getProvinsi'])->name('provinsi');
         Route::get('/kota/{provinsiId}', [WilayahController::class, 'getKota'])->name('kota');
         Route::get('/kecamatan/{kotaId}', [WilayahController::class, 'getKecamatan'])->name('kecamatan');

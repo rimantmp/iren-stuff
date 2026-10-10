@@ -2,8 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Dusun;
 use App\Models\JenisBantuan;
+use App\Models\Kecamatan;
+use App\Models\Kelurahan;
+use App\Models\Kota;
 use App\Models\PenyaluranBantuan;
+use App\Models\Provinsi;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
@@ -62,6 +67,13 @@ class DashboardController extends Controller
         // List semua jenis bantuan
         $semuaJenisBantuan = JenisBantuan::withCount('penyaluran')->get();
 
+        // Metrik Wilayah (khususnya untuk Petugas Wilayah & overview)
+        $totalProvinsi = Provinsi::count();
+        $totalKota = Kota::count();
+        $totalKecamatan = Kecamatan::count();
+        $totalKelurahan = Kelurahan::count();
+        $totalDusun = Dusun::count();
+
         return view('dashboard.index', compact(
             'totalPenyaluranAir',
             'volumeAirTersalurkan',
@@ -70,7 +82,12 @@ class DashboardController extends Controller
             'statusCounts',
             'mapTitik',
             'penyaluranTerbaru',
-            'semuaJenisBantuan'
+            'semuaJenisBantuan',
+            'totalProvinsi',
+            'totalKota',
+            'totalKecamatan',
+            'totalKelurahan',
+            'totalDusun'
         ));
     }
 }
