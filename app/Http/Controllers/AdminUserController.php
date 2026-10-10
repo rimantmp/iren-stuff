@@ -12,7 +12,7 @@ use Illuminate\View\View;
 class AdminUserController extends Controller
 {
     /**
-     * Tampilkan daftar akun administrator.
+     * Tampilkan daftar akun pengguna/administrator.
      */
     public function index(Request $request): View
     {
@@ -26,21 +26,29 @@ class AdminUserController extends Controller
             });
         }
 
-        $users = $query->latest('id')->paginate(10)->withQueryString();
+        if ($request->filled('role')) {
+            $query->where('role', $request->query('role'));
+        }
 
-        return view('admin.users.index', compact('users'));
+        $users = $query->latest('id')->paginate(10)->withQueryString();
+        $roles = User::ROLES;
+
+        return view('admin.users.index', compact('users', 'roles'));
     }
 
     /**
-     * Formulir tambah administrator baru.
+     * Formulir tambah pengguna baru.
      */
     public function create(): View
     {
-        return view('admin.users.create');
+        $roles = User::ROLES;
+        $permissions = User::PERMISSIONS;
+
+        return view('admin.users.create', compact('roles', 'permissions'));
     }
 
     /**
-     * Simpan administrator baru ke basis data.
+     * Simpan pengguna baru ke basis data.
      */
     public function store(Request $request): RedirectResponse
     {
@@ -48,37 +56,54 @@ class AdminUserController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'confirmed', Password::min(6)],
+            'role' => ['nullable', 'string', 'in:'.implode(',', array_keys(User::ROLES))],
+            'permissions' => ['nullable', 'array'],
+            'permissions.*' => ['string', 'in:'.implode(',', array_keys(User::PERMISSIONS))],
         ], [
-            'name.required' => 'Nama administrator wajib diisi.',
+            'name.required' => 'Nama pengguna wajib diisi.',
             'email.required' => 'Alamat email wajib diisi.',
             'email.email' => 'Format email tidak valid.',
             'email.unique' => 'Email ini sudah terdaftar sebagai akun lain.',
             'password.required' => 'Kata sandi wajib diisi.',
             'password.confirmed' => 'Konfirmasi kata sandi tidak cocok.',
             'password.min' => 'Kata sandi minimal berjumlah 6 karakter.',
+            'role.in' => 'Pilihan peran tidak valid.',
         ]);
+
+        $role = $validated['role'] ?? User::ROLE_ADMIN;
+        $permissions = null;
+
+        if ($role === User::ROLE_PETUGAS_WILAYAH) {
+            $permissions = ['wilayah'];
+        } elseif ($role === User::ROLE_CUSTOM) {
+            $permissions = $validated['permissions'] ?? [];
+        }
 
         User::create([
             'name' => $validated['name'],
             'email' => strtolower($validated['email']),
             'password' => Hash::make($validated['password']),
+            'role' => $role,
+            'permissions' => $permissions,
         ]);
 
-        return redirect()->route('admin.users.index')->with('success', "Akun administrator {$validated['name']} ({$validated['email']}) berhasil ditambahkan!");
+        return redirect()->route('admin.users.index')->with('success', "Akun pengguna {$validated['name']} ({$validated['email']}) berhasil ditambahkan!");
     }
 
     /**
-     * Formulir edit akun administrator.
+     * Formulir edit akun pengguna.
      */
     public function edit(int $id): View
     {
         $user = User::findOrFail($id);
+        $roles = User::ROLES;
+        $permissions = User::PERMISSIONS;
 
-        return view('admin.users.edit', compact('user'));
+        return view('admin.users.edit', compact('user', 'roles', 'permissions'));
     }
 
     /**
-     * Perbarui akun administrator.
+     * Perbarui akun pengguna.
      */
     public function update(Request $request, int $id): RedirectResponse
     {
@@ -88,17 +113,47 @@ class AdminUserController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,'.$user->id],
             'password' => ['nullable', 'string', 'confirmed', Password::min(6)],
+            'role' => ['nullable', 'string', 'in:'.implode(',', array_keys(User::ROLES))],
+            'permissions' => ['nullable', 'array'],
+            'permissions.*' => ['string', 'in:'.implode(',', array_keys(User::PERMISSIONS))],
         ], [
-            'name.required' => 'Nama administrator wajib diisi.',
+            'name.required' => 'Nama pengguna wajib diisi.',
             'email.required' => 'Alamat email wajib diisi.',
             'email.unique' => 'Email ini sudah digunakan oleh akun lain.',
             'password.confirmed' => 'Konfirmasi kata sandi baru tidak cocok.',
             'password.min' => 'Kata sandi baru minimal berjumlah 6 karakter.',
+            'role.in' => 'Pilihan peran tidak valid.',
         ]);
+
+        $role = $validated['role'] ?? $user->role;
+
+        // Pencegahan: Akun sendiri tidak boleh mengubah rolenya sendiri jika itu admin
+        if (auth()->id() === $user->id && $user->isAdmin() && $role !== User::ROLE_ADMIN) {
+            return back()->with('error', 'Anda tidak dapat mengubah peran akun Anda sendiri dari Administrator.');
+        }
+
+        // Pencegahan: Jika ini satu-satunya administrator, tidak boleh diturunkan rolenya
+        if ($user->isAdmin() && $role !== User::ROLE_ADMIN && User::where('role', User::ROLE_ADMIN)->count() <= 1) {
+            return back()->with('error', 'Tidak dapat mengubah peran karena sistem memerlukan minimal satu Administrator aktif.');
+        }
+
+        $permissions = $user->permissions;
+
+        if (array_key_exists('role', $validated)) {
+            if ($role === User::ROLE_PETUGAS_WILAYAH) {
+                $permissions = ['wilayah'];
+            } elseif ($role === User::ROLE_CUSTOM) {
+                $permissions = $validated['permissions'] ?? [];
+            } else {
+                $permissions = null;
+            }
+        }
 
         $updates = [
             'name' => $validated['name'],
             'email' => strtolower($validated['email']),
+            'role' => $role,
+            'permissions' => $permissions,
         ];
 
         if (! empty($validated['password'])) {
@@ -107,11 +162,11 @@ class AdminUserController extends Controller
 
         $user->update($updates);
 
-        return redirect()->route('admin.users.index')->with('success', "Akun administrator {$user->name} berhasil diperbarui!");
+        return redirect()->route('admin.users.index')->with('success', "Akun pengguna {$user->name} berhasil diperbarui!");
     }
 
     /**
-     * Hapus akun administrator.
+     * Hapus akun pengguna.
      */
     public function destroy(int $id): RedirectResponse
     {
@@ -123,13 +178,13 @@ class AdminUserController extends Controller
         }
 
         // Pencegahan menghapus jika hanya tersisa 1 administrator
-        if (User::count() <= 1) {
+        if ($user->isAdmin() && User::where('role', User::ROLE_ADMIN)->count() <= 1) {
             return back()->with('error', 'Tidak dapat menghapus akun karena sistem memerlukan minimal satu administrator aktif.');
         }
 
         $userName = $user->name;
         $user->delete();
 
-        return redirect()->route('admin.users.index')->with('success', "Akun administrator {$userName} berhasil dihapus.");
+        return redirect()->route('admin.users.index')->with('success', "Akun pengguna {$userName} berhasil dihapus.");
     }
 }

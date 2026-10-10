@@ -1,11 +1,13 @@
 @extends('layouts.admin')
 
-@section('title', 'Dashboard')
-@section('page_title', 'Ringkasan Penyaluran Bantuan')
-@section('page_subtitle', 'Pemantauan volume penyaluran air bersih dan sebaran wilayah')
+@section('title', auth()->user()->hasPermission('bantuan_air') ? 'Dashboard Penyaluran' : 'Dashboard Master Wilayah')
+@section('page_title', auth()->user()->hasPermission('bantuan_air') ? 'Ringkasan Penyaluran Bantuan' : 'Pusat Pengelolaan Master Wilayah')
+@section('page_subtitle', auth()->user()->hasPermission('bantuan_air') ? 'Pemantauan volume penyaluran air bersih dan sebaran wilayah' : 'Kelola struktur hierarki wilayah administratif dari Provinsi hingga Dusun')
 
 @section('content')
 <div class="space-y-6">
+
+    @if(auth()->user()->hasPermission('bantuan_air'))
 
     <!-- KPI Metric Cards -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -182,6 +184,111 @@
             </div>
         </div>
     </div>
+    @else
+    <!-- Tampilan Dashboard Khusus Pengelola Wilayah -->
+    <div class="space-y-6">
+        <!-- Banner Informasi Akun -->
+        <div class="bg-gradient-to-r from-slate-900 to-blue-950 rounded-lg p-6 text-white border border-slate-800 shadow-sm">
+            <div class="max-w-2xl">
+                <span class="text-[11px] uppercase tracking-wider text-blue-300 font-semibold block mb-1">Peran: {{ auth()->user()->role_label }}</span>
+                <h2 class="text-xl font-bold leading-tight">Selamat Datang di Portal Master Wilayah</h2>
+                <p class="text-xs text-slate-300 mt-2 leading-relaxed">
+                    Anda memiliki hak akses untuk mengelola hierarki wilayah administratif dari tingkat Provinsi, Kota/Kabupaten, Kecamatan, Kelurahan/Desa, hingga Dusun.
+                </p>
+            </div>
+        </div>
+
+        <!-- 5 Kartu Metrik Wilayah -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            <a href="{{ route('master.provinsi') }}" class="bg-white rounded-lg p-4 border border-slate-200 hover:border-blue-500 hover:shadow-sm transition block group">
+                <span class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">Provinsi</span>
+                <div class="text-2xl font-bold text-slate-900 mt-1 group-hover:text-blue-700 transition">
+                    {{ number_format($totalProvinsi, 0, ',', '.') }}
+                </div>
+                <span class="text-[10px] text-blue-600 mt-1 inline-flex items-center font-medium">Buka Provinsi &rarr;</span>
+            </a>
+
+            <a href="{{ route('master.kota') }}" class="bg-white rounded-lg p-4 border border-slate-200 hover:border-blue-500 hover:shadow-sm transition block group">
+                <span class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">Kota / Kabupaten</span>
+                <div class="text-2xl font-bold text-slate-900 mt-1 group-hover:text-blue-700 transition">
+                    {{ number_format($totalKota, 0, ',', '.') }}
+                </div>
+                <span class="text-[10px] text-blue-600 mt-1 inline-flex items-center font-medium">Buka Kota &rarr;</span>
+            </a>
+
+            <a href="{{ route('master.kecamatan') }}" class="bg-white rounded-lg p-4 border border-slate-200 hover:border-blue-500 hover:shadow-sm transition block group">
+                <span class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">Kecamatan</span>
+                <div class="text-2xl font-bold text-slate-900 mt-1 group-hover:text-blue-700 transition">
+                    {{ number_format($totalKecamatan, 0, ',', '.') }}
+                </div>
+                <span class="text-[10px] text-blue-600 mt-1 inline-flex items-center font-medium">Buka Kecamatan &rarr;</span>
+            </a>
+
+            <a href="{{ route('master.kelurahan') }}" class="bg-white rounded-lg p-4 border border-slate-200 hover:border-blue-500 hover:shadow-sm transition block group">
+                <span class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">Kelurahan / Desa</span>
+                <div class="text-2xl font-bold text-slate-900 mt-1 group-hover:text-blue-700 transition">
+                    {{ number_format($totalKelurahan, 0, ',', '.') }}
+                </div>
+                <span class="text-[10px] text-blue-600 mt-1 inline-flex items-center font-medium">Buka Kelurahan &rarr;</span>
+            </a>
+
+            <a href="{{ route('master.dusun') }}" class="bg-white rounded-lg p-4 border border-slate-200 hover:border-blue-500 hover:shadow-sm transition block group">
+                <span class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">Dusun</span>
+                <div class="text-2xl font-bold text-slate-900 mt-1 group-hover:text-blue-700 transition">
+                    {{ number_format($totalDusun, 0, ',', '.') }}
+                </div>
+                <span class="text-[10px] text-blue-600 mt-1 inline-flex items-center font-medium">Buka Dusun &rarr;</span>
+            </a>
+        </div>
+
+        <!-- Aksi Cepat & Struktur Wilayah -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-white rounded-lg border border-slate-200 p-5 space-y-4">
+                <div class="border-b border-slate-100 pb-3">
+                    <h3 class="text-sm font-semibold text-slate-900">Aksi Cepat Pengelolaan Wilayah</h3>
+                    <p class="text-xs text-slate-500">Pintasan penambahan data wilayah ke dalam sistem</p>
+                </div>
+                <div class="space-y-2.5">
+                    <a href="{{ route('master.dusun') }}" class="flex items-center justify-between p-3 rounded-md border border-slate-200 hover:bg-slate-50 transition">
+                        <div class="flex items-center space-x-3">
+                            <span class="w-8 h-8 rounded bg-blue-100 text-blue-800 flex items-center justify-center font-bold text-xs">D</span>
+                            <div>
+                                <span class="text-xs font-semibold text-slate-900 block">Kelola & Tambah Dusun</span>
+                                <span class="text-[11px] text-slate-500">Tersedia formulir satuan dan input massal (batch create)</span>
+                            </div>
+                        </div>
+                        <span class="text-xs text-blue-700 font-medium">Buka &rarr;</span>
+                    </a>
+
+                    <a href="{{ route('master.kelurahan') }}" class="flex items-center justify-between p-3 rounded-md border border-slate-200 hover:bg-slate-50 transition">
+                        <div class="flex items-center space-x-3">
+                            <span class="w-8 h-8 rounded bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-xs">K</span>
+                            <div>
+                                <span class="text-xs font-semibold text-slate-900 block">Kelola Kelurahan & Desa</span>
+                                <span class="text-[11px] text-slate-500">Periksa daftar kelurahan dan relasi ke kecamatan</span>
+                            </div>
+                        </div>
+                        <span class="text-xs text-blue-700 font-medium">Buka &rarr;</span>
+                    </a>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg border border-slate-200 p-5 space-y-3">
+                <div class="border-b border-slate-100 pb-3">
+                    <h3 class="text-sm font-semibold text-slate-900">Struktur Hierarki Wilayah</h3>
+                    <p class="text-xs text-slate-500">Urutan relasi data administratif</p>
+                </div>
+                <ol class="space-y-2 text-xs text-slate-700 pl-4 list-decimal">
+                    <li><strong class="text-slate-900">Provinsi</strong>: Entitas induk wilayah dan status aktifasi.</li>
+                    <li><strong class="text-slate-900">Kota / Kabupaten</strong>: Membawahi kecamatan dan konfigurasi dapil.</li>
+                    <li><strong class="text-slate-900">Kecamatan</strong>: Bagian administratif di bawah kota atau kabupaten.</li>
+                    <li><strong class="text-slate-900">Kelurahan / Desa</strong>: Titik administrasi utama warga.</li>
+                    <li><strong class="text-slate-900">Dusun</strong>: Rukun dusun/lingkungan untuk distribusi presisi.</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+    @endif
 
 </div>
 @endsection
@@ -189,6 +296,9 @@
 @push('scripts')
 <script>
     document.addEventListener("DOMContentLoaded", function() {
+        const mapContainer = document.getElementById('sebaranMap');
+        if (!mapContainer) return;
+
         const titikData = @json($mapTitik);
 
         let defaultCenter = [-0.789275, 113.921327];

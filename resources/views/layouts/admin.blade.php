@@ -127,6 +127,7 @@
                 </div>
 
                 <!-- Section: Program Bantuan -->
+                @if(auth()->user()->hasPermission('bantuan_air'))
                 <div>
                     <span class="px-3 text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">Penyaluran Bantuan</span>
                     <div class="space-y-0.5">
@@ -136,7 +137,6 @@
                                 <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
                                 <span>Air Bersih</span>
                             </div>
-                            <!-- <span class="text-[10px] px-1.5 py-0.2 text-blue-200 bg-blue-900 rounded font-medium">New</span> -->
                         </a>
 
                         <a href="{{ route('bantuan.sembako') }}"
@@ -173,8 +173,10 @@
                         </a>
                     </div>
                 </div>
+                @endif
 
                 <!-- Section: Master Wilayah -->
+                @if(auth()->user()->hasPermission('wilayah'))
                 <div>
                     <span class="px-3 text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">Master Wilayah</span>
                     <div class="space-y-0.5">
@@ -205,8 +207,10 @@
                         </a>
                     </div>
                 </div>
+                @endif
 
                 <!-- Section: Laporan -->
+                @if(auth()->user()->hasPermission('rekap'))
                 <div>
                     <span class="px-3 text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">Laporan</span>
                     <div class="space-y-0.5">
@@ -221,34 +225,45 @@
                                 <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
                                 <span>Laporan Perbandingan</span>
                             </div>
-                            <!-- <span class="text-[9px] px-1.5 py-0.5 text-emerald-300 bg-emerald-950/80 border border-emerald-700/60 rounded font-semibold">Wilayah</span> -->
                         </a>
                     </div>
                 </div>
+                @endif
 
                 <!-- Section: Pengaturan Akun -->
+                @if(auth()->user()->hasPermission('users') || auth()->user()->hasPermission('backup'))
                 <div>
                     <span class="px-3 text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">Pengaturan & Sistem</span>
                     <div class="space-y-0.5">
+                        @if(auth()->user()->hasPermission('users'))
                         <a href="{{ route('admin.users.index') }}"
                            class="flex items-center space-x-2.5 px-3 py-2 rounded-md font-medium transition {{ request()->routeIs('admin.users.*') ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
                             <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
-                            <span>Kelola Administrator</span>
+                            <span>Kelola Pengguna</span>
                         </a>
+                        @endif
+                        @if(auth()->user()->hasPermission('backup'))
                         <a href="{{ route('admin.backup.index') }}"
                            class="flex items-center space-x-2.5 px-3 py-2 rounded-md font-medium transition {{ request()->routeIs('admin.backup.*') ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800 hover:text-white' }}">
                             <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"/></svg>
                             <span>Backup Database</span>
                         </a>
+                        @endif
                     </div>
                 </div>
+                @endif
             </nav>
 
             <!-- User Info & Logout -->
             <div class="p-3 border-t border-slate-800 bg-slate-950">
                 <div class="flex items-center justify-between">
                     <div class="overflow-hidden pr-2">
-                        <span class="text-xs font-semibold text-white block truncate">{{ auth()->user()->name ?? 'Administrator' }}</span>
+                        <div class="flex items-center space-x-1.5">
+                            <span class="text-xs font-semibold text-white truncate">{{ auth()->user()->name ?? 'Administrator' }}</span>
+                            <span class="text-[9px] px-1.5 py-0.5 rounded font-medium {{ auth()->user()->isAdmin() ? 'bg-blue-900/80 text-blue-300 border border-blue-700/50' : (auth()->user()->isPetugasWilayah() ? 'bg-emerald-950 text-emerald-300 border border-emerald-700/50' : 'bg-amber-950 text-amber-300 border border-amber-700/50') }}">
+                                {{ auth()->user()->isAdmin() ? 'Admin' : (auth()->user()->isPetugasWilayah() ? 'Wilayah' : 'Kustom') }}
+                            </span>
+                        </div>
                         <span class="text-[10px] text-slate-400 block truncate">{{ auth()->user()->email ?? 'admin@bantuan.id' }}</span>
                     </div>
                     <form action="{{ route('logout') }}" method="POST">
